@@ -1,4 +1,6 @@
 import heapq
+import random
+import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -6,6 +8,8 @@ from logging import getLogger
 from queue import Queue
 from time import sleep
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
+
+from bs4 import BeautifulSoup
 
 
 def _current_time_millis():
@@ -75,7 +79,14 @@ class FrontQueue:
             return self.urls[host].get()
 
 
+#TODO: implement
 class BackQueue:
+    def __init__(self):
+        self.queue = Queue()
+
+    def empty(self):
+        return self.queue.empty()
+
     pass
 
 
@@ -100,6 +111,11 @@ class Crawler:
 
         return url
 
+    def put_to_front_queue(self, url):
+        priority = random.randint(0, self.num_front_queues - 1)
+
+        self.front_queues[priority].add_url(url)
+
     def queue_raw_url(self, url):
         # Normalize URL
         url = self._normalize_url_(url)
@@ -116,6 +132,27 @@ class Crawler:
         if host not in self.back_queues:
             self.back_queues[host] = BackQueue()
             self.back_heap.add_new_host(host)
+
+        self.put_to_front_queue(url)
+
+    @staticmethod
+    def _get_hyperlinks_(text):
+        hyperlinks = set()
+        soup = BeautifulSoup(text, parser='lxml')
+
+        for tag in soup.find_all('a', href=True):
+            hyperlinks.add(tag['href'])
+
+        return hyperlinks
+
+    @staticmethod
+    def _get_url_contents_(url):
+        response = requests.get(url, headers=Crawler.BaseHeaders)
+
+        if response.status_code != 200:
+            return None
+        else:
+            return response.text
 
     '''
     Runs a number of crawlers which will run indefinitely. 
@@ -152,9 +189,6 @@ class Crawler:
             executor.submit(_crawl_)
 
     def __init__(self, num_front_queues=1):
-        # Maintain a list of actively running crawl threads
-        self.crawl_threads = list()
-
         # For certain operations (e.g. the set of seen URLs) a lock is used to avoid conflicts
         self.lock = threading.Lock()
 
@@ -175,3 +209,8 @@ class Crawler:
         self.front_queues = dict()
         for priority in range(num_front_queues):
             self.front_queues[priority] = FrontQueue()
+
+'''
+Cut corners: I have not accounted for the time taken to access the host, I always add a host back to the heap as soon
+as it is popped (although with a new delay). 
+'''
