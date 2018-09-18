@@ -3,6 +3,8 @@ import re
 
 class RobotsParser:
     AnyUserAgent = '*'
+    AgentRegex = re.compile("User-[aA]gent: (.*)")
+    DisallowRegex = re.compile("Disallow: (.*)")
 
     def __init__(self, robot_text=None):
         self.disallowed_pages = dict()
@@ -16,7 +18,7 @@ class RobotsParser:
         current_user_agent = None
         for line in lines:
             # Attempt to match user-agent signature
-            agent_match = re.match("User-[aA]gent: (.*)", line)
+            agent_match = self.AgentRegex.match(line)
             if agent_match:
                 current_user_agent = agent_match.group(1)
 
@@ -31,7 +33,7 @@ class RobotsParser:
                 continue
 
             # Attempt to match disallow signature
-            disallow_match = re.match("Disallow: (.*)", line)
+            disallow_match = self.DisallowRegex.match(line)
             if disallow_match:
                 self.disallowed_pages[current_user_agent].add(disallow_match.group(1))
 
