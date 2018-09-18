@@ -1,5 +1,5 @@
 # webcrawler
 Group participants:
-* Anders Højlund Brams
+* ~~Anders Højlund Brams~~
 * Anders Langballe Jakobsen
-* Thomas Buhl Andersen
+* ~~Thomas Buhl Andersen~~
