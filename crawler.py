@@ -111,7 +111,8 @@ class Crawler:
 
         return url
 
-    def put_to_front_queue(self, url):
+    def add_to_frontier(self, url):
+        # Currently, URLs are assigned to a random front queue
         priority = random.randint(0, self.num_front_queues - 1)
 
         self.front_queues[priority].add_url(url)
@@ -133,7 +134,7 @@ class Crawler:
             self.back_queues[host] = BackQueue()
             self.back_heap.add_new_host(host)
 
-        self.put_to_front_queue(url)
+        self.add_to_frontier(url)
 
     @staticmethod
     def _get_hyperlinks_(text):
@@ -150,6 +151,8 @@ class Crawler:
         response = requests.get(url, headers=Crawler.BaseHeaders)
 
         if response.status_code != 200:
+            getLogger().error(f'{url} returned {response.status_code}')
+
             return None
         else:
             return response.text
@@ -210,7 +213,10 @@ class Crawler:
         for priority in range(num_front_queues):
             self.front_queues[priority] = FrontQueue()
 
+
 '''
-Cut corners: I have not accounted for the time taken to access the host, I always add a host back to the heap as soon
+Cut corners:
+- I have not accounted for the time taken to access the host, I always add a host back to the heap as soon
 as it is popped (although with a new delay). 
+- I do not differentiate between www.[host] and [host]. In practice they can result in different IP addresses.
 '''
