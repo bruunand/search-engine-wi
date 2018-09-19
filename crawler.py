@@ -1,19 +1,30 @@
+import functools
 import heapq
 import random
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from logging import getLogger
-from queue import Queue
-from time import sleep
+from queue import Queue, Empty
+import time
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
 
 from bs4 import BeautifulSoup
 
 
 def _current_time_millis():
-    return datetime.now().microsecond
+    return int(round(time.time() * 1000))
+
+
+def log_on_failure(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            getLogger().error(f'Terminating worker exception: {e}')
+
+    return wrapper
 
 
 class BackHeap:
@@ -28,71 +39,38 @@ class BackHeap:
     Pop host returns a tuple (time_to_wait, host) where time to wait indicates how many seconds before
     the host can be crawled again, allowing the caller to sleep for that duration.
     '''
+
     def pop_host(self):
         with self.lock:
             # If heap is empty, return None
             if not self.heap:
                 return None
 
-            time, host = heapq.heappop(self.heap)
-
-            # Push the popped host back onto the heap
-            # The next crawl time will be our current time + the specified delta time
-            heapq.heappush(self.heap, (_current_time_millis() + self.DeltaTime, host))
+            next_time, host = heapq.heappop(self.heap)
 
             # Max is used here to avoid sleeping for a negative duration
-            return max(time - _current_time_millis(), 0) / 1000, host
+            return max(next_time - _current_time_millis(), 0) / 1000, host
 
-    def add_new_host(self, host):
+    '''
+    Add the host to the heap. If delay is specified (typically after the host has been visited) we need to specify
+    when the host can be visited again.
+    '''
+
+    def push_host(self, new_host, delay=True):
         with self.lock:
-            # Extracts hosts from the heap, used to test whether the host is actually new
-            hosts = [pair(1) for pair in self.heap]
+            # If host is already in heap, do not push it
+            for _, heap_host in self.heap:
+                if heap_host == new_host:
+                    getLogger().error(f'Attempted to push host {new_host} when already in heap')
 
-            if host not in hosts:
-                # Add the host to the top of heap, could also use current time instead of zero
-                heapq.heappush(self.heap, (0, host))
+                    return
 
-
-class FrontQueue:
-    def __init__(self):
-        self.urls = dict()
-        self.lock = threading.Lock()
-
-    def add_url(self, url):
-        with self.lock:
-            # Parse host from URL
-            host = urlparse(url).netloc
-
-            # Construct queue for this host
-            if host not in self.urls:
-                self.urls[host] = Queue()
-
-            self.urls[host].put(url)
-
-    def retrieve_url(self, host):
-        self.lock.acquire()
-
-        with self.lock:
-            if host not in self.urls:
-                return None
-
-            return self.urls[host].get()
-
-
-#TODO: implement
-class BackQueue:
-    def __init__(self):
-        self.queue = Queue()
-
-    def empty(self):
-        return self.queue.empty()
-
-    pass
+            heapq.heappush(self.heap, (_current_time_millis() + self.DeltaTime if delay else 0, new_host))
 
 
 class Crawler:
     BaseHeaders = {'User-Agent': 'Kekbot'}
-    MaxCrawlWorkers = 10
+    MaxCrawlWorkers = 2
 
     @staticmethod
     def _normalize_url_(url, referer=None):
@@ -111,15 +89,38 @@ class Crawler:
 
         return url
 
-    def add_to_frontier(self, url):
-        # Currently, URLs are assigned to a random front queue
+    def move_from_front(self):
+        # Randomly select which a front queue
         priority = random.randint(0, self.num_front_queues - 1)
+        selected_queue = self.front_queues[priority]
 
-        self.front_queues[priority].add_url(url)
+        # Extract URL from queue
+        try:
+            url = selected_queue.get()
+        except Empty:
+            return False
 
-    def queue_raw_url(self, url):
+        # Get host from URL
+        host = urlparse(url).netloc
+
+        # Add to associated back queue
+        back_queue = self.back_queues[host]
+        if back_queue:
+            back_queue.put(url)
+
+    def add_to_frontier(self, url):
+        # Add the URL to a random front queue
+        priority = random.randint(0, self.num_front_queues - 1)
+        self.front_queues[priority].put(url)
+
+    def queue_raw_url(self, url, referer=None):
+        illegal_starts = ['mailto:', 'javascript:']
+        for start in illegal_starts:
+            if url.startswith(start):
+                return
+
         # Normalize URL
-        url = self._normalize_url_(url)
+        url = self._normalize_url_(url, referer)
 
         # If we have seen this URL, discard it
         with self.lock:
@@ -131,37 +132,43 @@ class Crawler:
         # If host is unseen, create back queue and heap entry
         host = urlparse(url).netloc
         if host not in self.back_queues:
-            self.back_queues[host] = BackQueue()
-            self.back_heap.add_new_host(host)
+            self.back_queues[host] = Queue()
+
+            # If the host has not been seen before, we can push it to the heap and make it ready immediately
+            self.back_heap.push_host(host, delay=False)
 
         self.add_to_frontier(url)
 
     @staticmethod
     def _get_hyperlinks_(text):
         hyperlinks = set()
-        soup = BeautifulSoup(text, parser='lxml')
+        soup = BeautifulSoup(text, 'lxml')
 
         for tag in soup.find_all('a', href=True):
             hyperlinks.add(tag['href'])
 
         return hyperlinks
 
-    @staticmethod
-    def _get_url_contents_(url):
+    def request_url(self, url):
         response = requests.get(url, headers=Crawler.BaseHeaders)
 
+        # If we were redirected, we can also say that this URL has been crawled
+        self.seen_urls.add(response.url)
+        print(url)
         if response.status_code != 200:
             getLogger().error(f'{url} returned {response.status_code}')
 
-            return None
+            return None, response.url
         else:
-            return response.text
+            return response.text, response.url
 
     '''
     Runs a number of crawlers which will run indefinitely. 
     '''
+
     def run_crawlers(self):
         # Could principally not be a nested function, but it's nested to discourage calling from main thread
+        @log_on_failure
         def _crawl_():
             while True:
                 # Get next host to crawl and time we need to wait
@@ -171,7 +178,7 @@ class Crawler:
                 if not heap_pair:
                     getLogger().error('Back heap returned no host')
 
-                    sleep(1)
+                    time.sleep(1)
 
                     continue
 
@@ -180,7 +187,7 @@ class Crawler:
 
                 # If a wait time is specified, wait for that amount
                 if wait_time:
-                    sleep(wait_time)
+                    time.sleep(wait_time)
 
                 # Look up back queue associated with host
                 if host not in self.back_queues:
@@ -188,8 +195,35 @@ class Crawler:
 
                     continue
 
+                # Pull URL to visit from back queue, continue until the back queue is non-empty
+                back_queue = self.back_queues[host]
+                while back_queue.empty():
+                    self.move_from_front()
+
+                # Pull URL from non-empty back queue
+                url = back_queue.get()
+
+                try:
+                    # Get contents of extracted URL
+                    text, url = self.request_url(url)
+                    if not text or not url:
+                        continue
+
+                    # Get hyperlink from contents
+                    hyperlinks = self._get_hyperlinks_(text)
+
+                    # Add hyperlinks to queue
+                    for hyperlink in hyperlinks:
+                        self.queue_raw_url(hyperlink, referer=url)
+                except Exception as e:
+                    getLogger().error(f'Worker exception: {e}')
+                finally:
+                    # Even an exception occurs, push back the host to the heap
+                    self.back_heap.push_host(host, delay=True)
+
         with ThreadPoolExecutor(max_workers=self.MaxCrawlWorkers) as executor:
-            executor.submit(_crawl_)
+            for i in range(self.MaxCrawlWorkers):
+                executor.submit(_crawl_)
 
     def __init__(self, num_front_queues=1):
         # For certain operations (e.g. the set of seen URLs) a lock is used to avoid conflicts
@@ -211,12 +245,12 @@ class Crawler:
         self.num_front_queues = num_front_queues
         self.front_queues = dict()
         for priority in range(num_front_queues):
-            self.front_queues[priority] = FrontQueue()
+            self.front_queues[priority] = Queue()
 
 
 '''
 Cut corners:
-- I have not accounted for the time taken to access the host, I always add a host back to the heap as soon
-as it is popped (although with a new delay). 
+- I have not implemented prioritization in front queues. It uses a random system which is really no better than having
+one large queue.
 - I do not differentiate between www.[host] and [host]. In practice they can result in different IP addresses.
 '''
