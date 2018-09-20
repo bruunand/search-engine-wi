@@ -11,6 +11,8 @@ from urllib.parse import urlparse, urljoin, unquote, urlsplit
 
 from bs4 import BeautifulSoup
 
+from robots_parser import RobotsParser
+
 
 def _current_time_millis():
     return int(round(time.time() * 1000))
@@ -67,13 +69,17 @@ class BackHeap:
 
             heapq.heappush(self.heap, (_current_time_millis() + self.DeltaTime if delay else 0, new_host))
 
+    def get_hosts(self):
+        return [item[1] for item in self.heap]
+
 
 class Crawler:
-    BaseHeaders = {'User-Agent': 'Kekbot'}
-    MaxCrawlWorkers = 2
+    UserAgent = 'Kekbot'
+    BaseHeaders = {'User-Agent': UserAgent}
+    MaxCrawlWorkers = 5
 
     @staticmethod
-    def _normalize_url_(url, referer=None):
+    def _normalize_url(url, referer=None):
         # Expand relative links
         if referer:
             url = urljoin(referer, url)
@@ -120,7 +126,7 @@ class Crawler:
                 return
 
         # Normalize URL
-        url = self._normalize_url_(url, referer)
+        url = self._normalize_url(url, referer)
 
         # If we have seen this URL, discard it
         with self.lock:
@@ -140,7 +146,7 @@ class Crawler:
         self.add_to_frontier(url)
 
     @staticmethod
-    def _get_hyperlinks_(text):
+    def _get_hyperlinks(text):
         hyperlinks = set()
         soup = BeautifulSoup(text, 'lxml')
 
@@ -149,14 +155,25 @@ class Crawler:
 
         return hyperlinks
 
+    def get_robots_parser(self, host):
+        if host in self.host_robots:
+            return self.host_robots[host]
+
+        response, _ = self.request_url(f'http://{host}/robots.txt')
+        self.host_robots[host] = RobotsParser(robot_text=response)
+
+        time.sleep(1)
+
+        return self.host_robots[host]
+
     def request_url(self, url):
         response = requests.get(url, headers=Crawler.BaseHeaders)
 
         # If we were redirected, we can also say that this URL has been crawled
         self.seen_urls.add(response.url)
-        print(url)
+
         if response.status_code != 200:
-            getLogger().error(f'{url} returned {response.status_code}')
+            #getLogger().error(f'{url} returned {response.status_code}')
 
             return None, response.url
         else:
@@ -169,7 +186,7 @@ class Crawler:
     def run_crawlers(self):
         # Could principally not be a nested function, but it's nested to discourage calling from main thread
         @log_on_failure
-        def _crawl_():
+        def _crawl():
             while True:
                 # Get next host to crawl and time we need to wait
                 heap_pair = self.back_heap.pop_host()
@@ -204,13 +221,20 @@ class Crawler:
                 url = back_queue.get()
 
                 try:
+                    # Check if we are allowed to visit the URL
+                    url_path = urlparse(url).path
+                    if not self.get_robots_parser(host).can_access(url_path):
+                        #getLogger().error(f'Not allowed to visit {url}')
+
+                        continue
+
                     # Get contents of extracted URL
                     text, url = self.request_url(url)
                     if not text or not url:
                         continue
 
                     # Get hyperlink from contents
-                    hyperlinks = self._get_hyperlinks_(text)
+                    hyperlinks = self._get_hyperlinks(text)
 
                     # Add hyperlinks to queue
                     for hyperlink in hyperlinks:
@@ -223,7 +247,7 @@ class Crawler:
 
         with ThreadPoolExecutor(max_workers=self.MaxCrawlWorkers) as executor:
             for i in range(self.MaxCrawlWorkers):
-                executor.submit(_crawl_)
+                executor.submit(_crawl)
 
     def __init__(self, num_front_queues=1):
         # For certain operations (e.g. the set of seen URLs) a lock is used to avoid conflicts
@@ -252,5 +276,6 @@ class Crawler:
 Cut corners:
 - I have not implemented prioritization in front queues. It uses a random system which is really no better than having
 one large queue.
-- I do not differentiate between www.[host] and [host]. In practice they can result in different IP addresses.
+- I do not differentiate between www.[host] and [host]. In practice they can result in different IP addresses and
+different robot files, so perhaps it's not really an issue.
 '''
