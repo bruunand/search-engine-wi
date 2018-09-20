@@ -10,8 +10,9 @@ from urllib.parse import urlparse, urljoin, unquote, urlsplit
 import requests
 from bs4 import BeautifulSoup
 
-from robots_parser import RobotsParser
-from back_heap import BackHeap
+from webcrawler.parser.robots_parser import RobotsParser
+from webcrawler.back_heap import BackHeap
+
 
 def log_on_failure(func):
     @functools.wraps(func)
@@ -122,7 +123,7 @@ class Crawler:
         self.seen_urls.add(response.url)
 
         if response.status_code != 200:
-            #getLogger().error(f'{url} returned {response.status_code}')
+            # getLogger().error(f'{url} returned {response.status_code}')
 
             return None, response.url
         else:
@@ -171,7 +172,7 @@ class Crawler:
                     # Check if we are allowed to visit the URL
                     url_path = urlparse(url).path
                     if not self.get_robots_parser(host).can_access(url_path):
-                        #getLogger().error(f'Not allowed to visit {url}')
+                        # getLogger().error(f'Not allowed to visit {url}')
 
                         continue
 

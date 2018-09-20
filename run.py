@@ -1,7 +1,7 @@
 import time
 from threading import Thread
 
-from crawler import Crawler
+from webcrawler.crawler import Crawler
 
 if __name__ == "__main__":
     crawler = Crawler()

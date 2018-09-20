@@ -1,7 +1,7 @@
 import requests
 from unittest import TestCase
 
-from robots_parser import RobotsParser
+from webcrawler.parser.robots_parser import RobotsParser
 
 parser = RobotsParser(requests.get('https://www.facebook.com/robots.txt').text)
 

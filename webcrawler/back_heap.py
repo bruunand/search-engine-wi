@@ -9,11 +9,10 @@ def _current_time_millis():
 
 
 class BackHeap:
-    DeltaTime = 1000  # How long to wait between hitting a host
-
-    def __init__(self):
+    def __init__(self, delay=1000):
         self.lock = threading.Lock()
         self.heap = []
+        self.delay = delay
 
     '''
     The heap consists of pairs (time, host) where time specifies when the host can be crawled again.
@@ -46,7 +45,7 @@ class BackHeap:
 
                     return
 
-            heapq.heappush(self.heap, (_current_time_millis() + self.DeltaTime if delay else 0, new_host))
+            heapq.heappush(self.heap, (_current_time_millis() + self.delay if delay else 0, new_host))
 
     def get_hosts(self):
         return [item[1] for item in self.heap]
