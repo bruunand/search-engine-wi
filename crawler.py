@@ -1,22 +1,17 @@
 import functools
-import heapq
 import random
-import requests
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from logging import getLogger
 from queue import Queue, Empty
-import time
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
 
+import requests
 from bs4 import BeautifulSoup
 
 from robots_parser import RobotsParser
-
-
-def _current_time_millis():
-    return int(round(time.time() * 1000))
-
+from back_heap import BackHeap
 
 def log_on_failure(func):
     @functools.wraps(func)
@@ -29,54 +24,10 @@ def log_on_failure(func):
     return wrapper
 
 
-class BackHeap:
-    DeltaTime = 1000  # How long to wait between hitting a host
-
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.heap = []
-
-    '''
-    The heap consists of pairs (time, host) where time specifies when the host can be crawled again.
-    Pop host returns a tuple (time_to_wait, host) where time to wait indicates how many seconds before
-    the host can be crawled again, allowing the caller to sleep for that duration.
-    '''
-
-    def pop_host(self):
-        with self.lock:
-            # If heap is empty, return None
-            if not self.heap:
-                return None
-
-            next_time, host = heapq.heappop(self.heap)
-
-            # Max is used here to avoid sleeping for a negative duration
-            return max(next_time - _current_time_millis(), 0) / 1000, host
-
-    '''
-    Add the host to the heap. If delay is specified (typically after the host has been visited) we need to specify
-    when the host can be visited again.
-    '''
-
-    def push_host(self, new_host, delay=True):
-        with self.lock:
-            # If host is already in heap, do not push it
-            for _, heap_host in self.heap:
-                if heap_host == new_host:
-                    getLogger().error(f'Attempted to push host {new_host} when already in heap')
-
-                    return
-
-            heapq.heappush(self.heap, (_current_time_millis() + self.DeltaTime if delay else 0, new_host))
-
-    def get_hosts(self):
-        return [item[1] for item in self.heap]
-
-
 class Crawler:
     UserAgent = 'Kekbot'
     BaseHeaders = {'User-Agent': UserAgent}
-    MaxCrawlWorkers = 5
+    MaxCrawlWorkers = 100
 
     @staticmethod
     def _normalize_url(url, referer=None):
@@ -162,8 +113,6 @@ class Crawler:
         response, _ = self.request_url(f'http://{host}/robots.txt')
         self.host_robots[host] = RobotsParser(robot_text=response)
 
-        time.sleep(1)
-
         return self.host_robots[host]
 
     def request_url(self, url):
@@ -193,8 +142,6 @@ class Crawler:
 
                 # It should not occur that there are no hosts on the heap, but in that case wait and try again
                 if not heap_pair:
-                    getLogger().error('Back heap returned no host')
-
                     time.sleep(1)
 
                     continue
