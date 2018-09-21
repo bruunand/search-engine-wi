@@ -28,7 +28,7 @@ def log_on_failure(func):
 class Crawler:
     UserAgent = 'Kekbot'
     BaseHeaders = {'User-Agent': UserAgent}
-    MaxCrawlWorkers = 100
+    MaxCrawlWorkers = 10
 
     @staticmethod
     def _normalize_url(url, referer=None):
@@ -171,7 +171,7 @@ class Crawler:
                 try:
                     # Check if we are allowed to visit the URL
                     url_path = urlparse(url).path
-                    if not self.get_robots_parser(host).can_access(url_path):
+                    if not self.get_robots_parser(host).can_access(url_path, user_agent=self.UserAgent):
                         # getLogger().error(f'Not allowed to visit {url}')
 
                         continue
