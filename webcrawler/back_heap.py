@@ -42,9 +42,11 @@ class BackHeap:
             if new_host in self.get_hosts():
                 getLogger().error(f'Attempted to push host {new_host} when already in heap')
 
-                return
+                return False
 
             heapq.heappush(self.heap, (_current_time_millis() + self.delay if delay else 0, new_host))
+
+            return True
 
     def get_hosts(self):
         return [item[1] for item in self.heap]
