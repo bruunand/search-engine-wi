@@ -39,11 +39,10 @@ class BackHeap:
     def push_host(self, new_host, delay=True):
         with self.lock:
             # If host is already in heap, do not push it
-            for _, heap_host in self.heap:
-                if heap_host == new_host:
-                    getLogger().error(f'Attempted to push host {new_host} when already in heap')
+            if new_host in self.get_hosts():
+                getLogger().error(f'Attempted to push host {new_host} when already in heap')
 
-                    return
+                return
 
             heapq.heappush(self.heap, (_current_time_millis() + self.delay if delay else 0, new_host))
 
