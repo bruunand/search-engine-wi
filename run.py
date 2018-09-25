@@ -1,6 +1,7 @@
 import time
 from threading import Thread
 
+from indexing.indexer import Indexer
 from webcrawler.crawler import Crawler
 
 if __name__ == "__main__":
@@ -20,6 +21,10 @@ if __name__ == "__main__":
 
     thread = Thread(target=logger)
     thread.start()
+
+    # Run indexer thread
+    indexer = Indexer(crawler.unindexed)
+    indexer.run()
 
     # Start crawler threads
     crawler.run_crawlers()

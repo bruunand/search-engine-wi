@@ -207,7 +207,7 @@ class Crawler:
                     for tag in soup(["script", "style"]):
                         tag.extract()
 
-                    self.unindexed.put((url, text))
+                    self.unindexed.put((url, soup.text))
                 except Exception as e:
                     getLogger().error(f'Worker exception: {e}')
                 finally:
