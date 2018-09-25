@@ -28,7 +28,7 @@ def log_on_failure(func):
 class Crawler:
     UserAgent = 'Kekbot'
     BaseHeaders = {'User-Agent': UserAgent}
-    MaxCrawlWorkers = 10
+    WorkerThreads = 10
 
     @staticmethod
     def _normalize_url(url, referer=None):
@@ -98,9 +98,8 @@ class Crawler:
         self.add_to_frontier(url)
 
     @staticmethod
-    def _get_hyperlinks(text):
+    def _get_hyperlinks(soup):
         hyperlinks = set()
-        soup = BeautifulSoup(text, 'lxml')
 
         for tag in soup.find_all('a', href=True):
             hyperlinks.add(tag['href'])
@@ -112,12 +111,16 @@ class Crawler:
             return self.host_robots[host]
 
         response, _ = self.request_url(f'http://{host}/robots.txt')
-        self.host_robots[host] = RobotsParser(robot_text=response)
+        if response:
+            self.host_robots[host] = RobotsParser(robot_text=response)
+        else:
+            # If robots could not be accessed, an empty parser is used which allows anything
+            self.host_robots[host] = RobotsParser()
 
         return self.host_robots[host]
 
     def request_url(self, url):
-        response = requests.get(url, headers=Crawler.BaseHeaders)
+        response = requests.get(url, headers=Crawler.BaseHeaders, timeout=5)
 
         # If we were redirected, we can also say that this URL has been crawled
         self.seen_urls.add(response.url)
@@ -176,28 +179,49 @@ class Crawler:
 
                         continue
 
+                    # Increment request counter
+                    self.num_requests += 1
+
                     # Get contents of extracted URL
                     text, url = self.request_url(url)
                     if not text or not url:
+                        getLogger().error(f'Failed to get {url}')
+
+                        continue
+
+                    # Parse with BS4
+                    soup = BeautifulSoup(text, 'lxml')
+                    if not soup:
+                        getLogger().error(f'Could not parse {url}')
+
                         continue
 
                     # Get hyperlink from contents
-                    hyperlinks = self._get_hyperlinks(text)
+                    hyperlinks = self._get_hyperlinks(soup)
 
                     # Add hyperlinks to queue
                     for hyperlink in hyperlinks:
                         self.queue_raw_url(hyperlink, referer=url)
+
+                    # Remove irrelevant tags
+                    for tag in soup(["script", "style"]):
+                        tag.extract()
+
+                    self.unindexed.put((url, text))
                 except Exception as e:
                     getLogger().error(f'Worker exception: {e}')
                 finally:
                     # Even an exception occurs, push back the host to the heap
                     self.back_heap.push_host(host, delay=True)
 
-        with ThreadPoolExecutor(max_workers=self.MaxCrawlWorkers) as executor:
-            for i in range(self.MaxCrawlWorkers):
+        with ThreadPoolExecutor(max_workers=self.WorkerThreads) as executor:
+            for i in range(self.WorkerThreads):
                 executor.submit(_crawl)
 
     def __init__(self, num_front_queues=1):
+        # Maintain a counter of requests made
+        self.num_requests = 0
+
         # For certain operations (e.g. the set of seen URLs) a lock is used to avoid conflicts
         self.lock = threading.Lock()
 
@@ -212,6 +236,9 @@ class Crawler:
 
         # Maintain a set of seen URLs to avoid redundant crawling
         self.seen_urls = set()
+
+        # Maintains a queue of unindexed text
+        self.unindexed = Queue()
 
         # Maintain a mapping of prioritised front queues
         self.num_front_queues = num_front_queues
