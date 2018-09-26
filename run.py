@@ -2,14 +2,16 @@ import time
 from threading import Thread
 
 from indexing.indexer import Indexer
-from webcrawler.crawler import Crawler
+from webcrawling.crawler import Crawler
 
 if __name__ == "__main__":
     crawler = Crawler()
 
     # Add seed URLs
-    crawler.queue_raw_url("http://reddit.com")
+    #crawler.queue_raw_url("http://reddit.com")
     crawler.queue_raw_url('http://tv2.dk')
+    crawler.queue_raw_url('http://anderslangballe.dk')
+    crawler.queue_raw_url('http://eb.dk')
 
     # Start logger thread
     def logger():
@@ -24,7 +26,16 @@ if __name__ == "__main__":
 
     # Run indexer thread
     indexer = Indexer(crawler.unindexed)
-    indexer.run()
+    indexer.start_indexer()
 
     # Start crawler threads
-    crawler.run_crawlers()
+    crawler.start_crawlers()
+
+    # Run queries
+    while True:
+        set = indexer.query("((anders AND langballe))")
+
+        for id in set:
+            print(indexer.url_vocabulary.get(id))
+
+        time.sleep(1)

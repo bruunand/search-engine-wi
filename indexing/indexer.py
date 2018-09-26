@@ -1,4 +1,7 @@
 from threading import Thread
+import re
+
+from querying.querier import Querier
 
 
 class UrlVocabulary:
@@ -12,7 +15,7 @@ class UrlVocabulary:
     def get_document_ids(self):
         return set(self._internal_dict.keys())
 
-    def add_url(self, url):
+    def add(self, url):
         # Check if URL is already in dictionary (may not be necessary, NOT efficient)
         for key, value in self._internal_dict.items():
             if value == url:
@@ -24,13 +27,16 @@ class UrlVocabulary:
 
         return self._document_counter
 
+    def get(self, id):
+        return self._internal_dict[id] if id in self._internal_dict else None
+
 
 class WordDictionary:
     def __init__(self, url_vocabulary):
         self._internal_dict = dict()
         self._url_vocabulary = url_vocabulary
 
-    def add_word_occurrence(self, word, document_id):
+    def add_occurrence(self, word, document_id):
         if word not in self._internal_dict:
             self._internal_dict[word] = set()
 
@@ -44,54 +50,51 @@ class WordDictionary:
 
 
 def tokenize(text):
+    split = text.split()
+
+    return split
 
 
 class Indexer:
-    def __init__(self, unindexed_queue):
-        self._indexer_thread = None
+    def __init__(self, unindexed_queue=None):
+        self.indexing = False
+        self.url_vocabulary = UrlVocabulary()
+        self.word_dictionary = WordDictionary(self.url_vocabulary)
+        self.document_ids = set()
         self._unindexed_queue = unindexed_queue
-        self._url_vocabulary = UrlVocabulary()
-        self._word_dictionary = WordDictionary(self._url_vocabulary)
+
+    def index_text(self, contents, document_id):
+        if not document_id in self.document_ids:
+            self.document_ids.add(document_id)
+
+        # Convert contents to lowercase
+        contents = contents.lower()
+
+        # Tokenize document and add tokens to word dictionary
+        for token in tokenize(contents):
+            self.word_dictionary.add_occurrence(token, document_id)
 
     """Performs indexing in the background"""
-    def run(self):
+    def start_indexer(self):
+        self.indexing = True
+
         def _indexer():
-            while True:
+            while self.indexing:
                 url, contents = self._unindexed_queue.get()
 
                 # Get document id
-                document_id = self._url_vocabulary.add_url(url)
+                document_id = self.url_vocabulary.add(url)
 
-                # Convert contents to lowercase
-                contents = contents.lower()
+                self.index_text(contents, document_id)
 
+        thread = Thread(target=_indexer)
+        thread.start()
 
-                # Tokenize document and add tokens to word dictionary
-                for token in tokenize(contents):
-                    self._word_dictionary.add_word_occurrence(token, document_id)
-                # Split to get every word
-                for word in contents.split():
-                    self._word_dictionary.add_word_occurrence(word, document_id)
+    def stop_indexer(self):
+        self.indexing = False
 
-                print(self._word_dictionary._internal_dict)
+    """ Returns a set of document IDs which match the query. """
+    def query(self, query):
+        querier = Querier(self)
 
-        self._indexer_thread = Thread(target=_indexer)
-        self._indexer_thread.start()
-
-    def _term_to_set(self, term):
-        # Parse term in parentheses
-        # Parse AND term
-        # Parse OR term
-        # Parse NOT term
-        # It is most likely a word, lookup which documents it appears in
-        # If it is not in the word dictionary, return the empty set
-        return self._word_dictionary.get(term) if self._word_dictionary.has(term) else set()
-
-    def _not(self, term):
-        return self._url_vocabulary.get_document_ids().difference(term)
-
-    def _and(self, left, right):
-        return left.intersection(right)
-
-    def _or(self, left, right):
-        return left.union(right)
+        return querier.parse_query(query)

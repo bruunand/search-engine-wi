@@ -1,9 +1,9 @@
 import unittest
 
-from webcrawler.back_heap import BackHeap
+from webcrawling.back_heap import BackHeap
 
 
-class TestBackHeapMethods(unittest.TestCase):
+class BackHeapTests(unittest.TestCase):
     SampleHost = 'test.com'
 
     def test_push(self):
@@ -18,7 +18,7 @@ class TestBackHeapMethods(unittest.TestCase):
     def test_pop_push(self):
         heap = BackHeap()
         self.assertTrue(heap.push_host(self.SampleHost, delay=False))
-        self.assertEquals(heap.pop_host(), (0, self.SampleHost))
+        self.assertEqual(heap.pop_host(), (0, self.SampleHost))
         self.assertTrue(heap.push_host(self.SampleHost))
 
     def test_pop_empty(self):

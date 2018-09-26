@@ -10,8 +10,8 @@ from urllib.parse import urlparse, urljoin, unquote, urlsplit
 import requests
 from bs4 import BeautifulSoup
 
-from webcrawler.parser.robots_parser import RobotsParser
-from webcrawler.back_heap import BackHeap
+from webcrawling.parser.robots_parser import RobotsParser
+from webcrawling.back_heap import BackHeap
 
 
 def log_on_failure(func):
@@ -132,15 +132,14 @@ class Crawler:
         else:
             return response.text, response.url
 
-    '''
-    Runs a number of crawlers which will run indefinitely. 
-    '''
+    """ Runs a number of crawlers which will run indefinitely. """
+    def start_crawlers(self):
+        self.crawling = True
 
-    def run_crawlers(self):
         # Could principally not be a nested function, but it's nested to discourage calling from main thread
         @log_on_failure
         def _crawl():
-            while True:
+            while self.crawling:
                 # Get next host to crawl and time we need to wait
                 heap_pair = self.back_heap.pop_host()
 
@@ -214,11 +213,16 @@ class Crawler:
                     # Even an exception occurs, push back the host to the heap
                     self.back_heap.push_host(host, delay=True)
 
-        with ThreadPoolExecutor(max_workers=self.WorkerThreads) as executor:
-            for i in range(self.WorkerThreads):
-                executor.submit(_crawl)
+        for i in range(self.WorkerThreads):
+            thread = threading.Thread(target=_crawl)
+            thread.start()
+
+    def stop_crawlers(self):
+        self.crawling = False
 
     def __init__(self, num_front_queues=1):
+        self.crawling = False
+
         # Maintain a counter of requests made
         self.num_requests = 0
 
