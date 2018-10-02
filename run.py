@@ -17,7 +17,7 @@ if __name__ == "__main__":
     def logger():
         while True:
             print(f'{len(crawler.seen_urls)} seen URLs, {len(crawler.back_heap.get_hosts())} hosts, {len(crawler.back_queues)} back queues')
-            print(f'Unindxed: {crawler.unindexed.qsize()}')
+            print(f'Unindexed: {crawler.unindexed.qsize()}')
             print(f'Requests made: {crawler.num_requests}')
             time.sleep(5)
 
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # Run queries
     while True:
-        set = indexer.query("((anders AND langballe))")
+        set = indexer.query("aalborg")
 
         for id in set:
             print(indexer.url_vocabulary.get(id))

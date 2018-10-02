@@ -1,7 +1,7 @@
 from threading import Thread
-import re
 
 from querying.querier import Querier
+from shared.tokenizer import tokenize
 
 
 class UrlVocabulary:
@@ -49,12 +49,6 @@ class WordDictionary:
         return self._internal_dict[word]
 
 
-def tokenize(text):
-    split = text.split()
-
-    return split
-
-
 class Indexer:
     def __init__(self, unindexed_queue=None):
         self.indexing = False
@@ -64,7 +58,7 @@ class Indexer:
         self._unindexed_queue = unindexed_queue
 
     def index_text(self, contents, document_id):
-        if not document_id in self.document_ids:
+        if document_id not in self.document_ids:
             self.document_ids.add(document_id)
 
         # Convert contents to lowercase

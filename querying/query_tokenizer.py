@@ -1,5 +1,9 @@
 import enum
 import re
+from stemming.porter2 import stem
+
+from shared.tokenizer import get_disallowed_words
+
 TokenizerRegex = re.compile(r'(\bAND\b|\bOR\b|NOT|\(|\))')
 
 
@@ -19,7 +23,7 @@ class Tokenizer:
         self.tokens = [token.strip() for token in TokenizerRegex.split(query) if token.strip() != '']
 
         self.token_types = list()
-        for token in self.tokens:
+        for idx, token in enumerate(self.tokens):
             if token == 'AND':
                 self.token_types.append(TokenType.AND)
             elif token == 'OR':
@@ -32,6 +36,13 @@ class Tokenizer:
                 self.token_types.append(TokenType.R_PAREN)
             else:
                 self.token_types.append(TokenType.STRING)
+
+                # Stem string token
+                self.tokens[idx] = stem(self.tokens[idx])
+
+                # Remove if disallowed word
+                if self.tokens[idx] in get_disallowed_words():
+                    del self.tokens[idx]
 
     def has_next(self):
         return self.index < len(self.tokens)

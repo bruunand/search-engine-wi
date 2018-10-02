@@ -1,4 +1,4 @@
-from indexing.query_tokenizer import Tokenizer, TokenType
+from querying.query_tokenizer import Tokenizer, TokenType
 
 
 class Querier:
