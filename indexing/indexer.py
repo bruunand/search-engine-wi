@@ -45,7 +45,7 @@ class WordDictionary:
         if document_id not in self._internal_dict[word]:
             self._internal_dict[word][document_id] = 0
 
-            self._internal_dict[word][document_id] += 1
+        self._internal_dict[word][document_id] += 1
 
     def has(self, word):
         return word in self._internal_dict
