@@ -50,6 +50,14 @@ class WordDictionary:
     def has(self, word):
         return word in self._internal_dict
 
+    """ Calculate idf. Logging is used to dampen its effect. """
+    def get_inverse_document_frequency(self, word):
+        return math.log10(len(self._url_vocabulary.get_document_ids()) / self.get_document_frequency(word))
+
+    """ Get the number of documents that the word appears in. """
+    def get_document_frequency(self, word):
+        return len(self.get_documents_with(word))
+
     """ Importance does not increase proportionally with frequency, so we use logging to damper the effect."""
     def get_log_frequency_weight(self, word, document):
         frequency = self.get_frequency_in_document(word, document)
