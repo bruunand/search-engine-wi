@@ -9,9 +9,12 @@ class Query:
         self._search_terms = self._tokenizer.get_search_terms()
         self._matches = self._parse()
 
+    def get_indexer(self):
+        return self._indexer
+
     def get_matches(self):
         return self._matches
-    
+
     def get_search_terms(self):
         return self._search_terms
 
