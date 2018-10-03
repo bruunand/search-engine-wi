@@ -1,14 +1,19 @@
 from querying.query_tokenizer import Tokenizer, TokenType
 
 
-class Querier:
-    def __init__(self, indexer):
+class Query:
+    """ Note that a the matches of a query are ready as soon as init has finished. """
+    def __init__(self, indexer, query):
         self._indexer = indexer
-        self._tokenizer = None
-
-    def parse_query(self, query):
         self._tokenizer = Tokenizer(query)
-        return self._parse()
+        self._search_terms = self._tokenizer.get_search_terms()
+        self._matches = self._parse()
+
+    def get_matches(self):
+        return self._matches
+    
+    def get_search_terms(self):
+        return self._search_terms
 
     def _parse(self):
         while self._tokenizer.has_next():
@@ -46,7 +51,7 @@ class Querier:
         if token_type == TokenType.STRING:
             term = self._tokenizer.next().lower()
 
-            return self._indexer.word_dictionary.get(term) if self._indexer.word_dictionary.has(term) else set()
+            return self._indexer.word_dict.get_documents_with(term) if self._indexer.word_dict.has(term) else set()
         elif token_type == TokenType.L_PAREN:
             # Proceed to next token
             self._tokenizer.next()

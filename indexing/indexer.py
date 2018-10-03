@@ -1,6 +1,7 @@
+import math
 from threading import Thread
 
-from querying.querier import Querier
+from querying.query import Query
 from shared.tokenizer import tokenize
 
 
@@ -37,23 +38,44 @@ class WordDictionary:
         self._url_vocabulary = url_vocabulary
 
     def add_occurrence(self, word, document_id):
-        if word not in self._internal_dict:
-            self._internal_dict[word] = set()
+        if not self.has(word):
+            self._internal_dict[word] = dict()
 
-        self._internal_dict[word].add(document_id)
+        # Check if document is part of the dictionary
+        if document_id not in self._internal_dict[word]:
+            self._internal_dict[word][document_id] = 0
+
+            self._internal_dict[word][document_id] += 1
 
     def has(self, word):
         return word in self._internal_dict
 
-    def get(self, word):
-        return self._internal_dict[word]
+    """ Importance does not increase proportionally with frequency, so we use logging to damper the effect."""
+    def get_log_frequency_weight(self, word, document):
+        frequency = self.get_frequency_in_document(word, document)
+
+        return 0 if not frequency else 1 + math.log10(frequency)
+
+    """ For some word, it will return a dictionary of documents IDs to the number of occurrences of that word. """
+    def get_frequency_in_document(self, word, document):
+        if not self.has(word):
+            return 0
+
+        if document not in self._internal_dict[word]:
+            return 0
+
+        return self._internal_dict[word][document]
+
+    """ For some word, it will return a set of document IDs that contain the specified word. """
+    def get_documents_with(self, word):
+        return set(self._internal_dict[word].keys())
 
 
 class Indexer:
     def __init__(self, unindexed_queue=None):
         self.indexing = False
         self.url_vocabulary = UrlVocabulary()
-        self.word_dictionary = WordDictionary(self.url_vocabulary)
+        self.word_dict = WordDictionary(self.url_vocabulary)
         self.document_ids = set()
         self._unindexed_queue = unindexed_queue
 
@@ -66,7 +88,7 @@ class Indexer:
 
         # Tokenize document and add tokens to word dictionary
         for token in tokenize(contents):
-            self.word_dictionary.add_occurrence(token, document_id)
+            self.word_dict.add_occurrence(token, document_id)
 
     """Performs indexing in the background"""
     def start_indexer(self):
@@ -86,9 +108,3 @@ class Indexer:
 
     def stop_indexer(self):
         self.indexing = False
-
-    """ Returns a set of document IDs which match the query. """
-    def query(self, query):
-        querier = Querier(self)
-
-        return querier.parse_query(query)

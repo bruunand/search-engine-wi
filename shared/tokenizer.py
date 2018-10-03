@@ -2,7 +2,7 @@ from stemming.porter2 import stem
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
-_disallowed_words = {'!', '?', ',', '.', '(', ')', '/', '<', '>'}.intersection(set(stopwords.words('english')))
+_disallowed_words = {'!', '?', ',', '.', '(', ')', '/', '<', '>'}.union(set(stopwords.words('english')))
 
 
 def get_disallowed_words():
