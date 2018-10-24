@@ -2,7 +2,6 @@ import functools
 import random
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from logging import getLogger
 from queue import Queue, Empty
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
@@ -10,8 +9,8 @@ from urllib.parse import urlparse, urljoin, unquote, urlsplit
 import requests
 from bs4 import BeautifulSoup
 
-from webcrawling.parser.robots_parser import RobotsParser
 from webcrawling.back_heap import BackHeap
+from webcrawling.parser.robots_parser import RobotsParser
 
 
 def log_on_failure(func):
@@ -71,15 +70,7 @@ class Crawler:
         priority = random.randint(0, self.num_front_queues - 1)
         self.front_queues[priority].put(url)
 
-    def queue_raw_url(self, url, referer=None):
-        illegal_starts = ['mailto:', 'javascript:']
-        for start in illegal_starts:
-            if url.startswith(start):
-                return
-
-        # Normalize URL
-        url = self._normalize_url(url, referer)
-
+    def queue_raw_url(self, url):
         # If we have seen this URL, discard it
         with self.lock:
             if url in self.seen_urls:
@@ -97,12 +88,18 @@ class Crawler:
 
         self.add_to_frontier(url)
 
-    @staticmethod
-    def _get_hyperlinks(soup):
+    def get_hyperlinks(self, soup, referer):
         hyperlinks = set()
+        illegal_starts = {'mailto:', 'javascript:', '#'}
 
         for tag in soup.find_all('a', href=True):
-            hyperlinks.add(tag['href'])
+            href = tag['href']
+
+            for start in illegal_starts:
+                if href.startswith(start):
+                    break
+            else:
+                hyperlinks.add(self._normalize_url(href, referer))
 
         return hyperlinks
 
@@ -133,6 +130,7 @@ class Crawler:
             return response.text, response.url
 
     """ Runs a number of crawlers which will run indefinitely. """
+
     def start_crawlers(self):
         self.crawling = True
 
@@ -196,11 +194,14 @@ class Crawler:
                         continue
 
                     # Get hyperlink from contents
-                    hyperlinks = self._get_hyperlinks(soup)
+                    hyperlinks = self.get_hyperlinks(soup, url)
+
+                    # Set outgoing links for current URL
+                    self.url_references[url] = hyperlinks
 
                     # Add hyperlinks to queue
                     for hyperlink in hyperlinks:
-                        self.queue_raw_url(hyperlink, referer=url)
+                        self.queue_raw_url(hyperlink)
 
                     # Remove irrelevant tags
                     for tag in soup(["script", "style"]):
@@ -222,6 +223,9 @@ class Crawler:
 
     def __init__(self, num_front_queues=1):
         self.crawling = False
+
+        # Maintain a dictionary from URLs to their referenced URLs
+        self.url_references = dict()
 
         # Maintain a counter of requests made
         self.num_requests = 0
