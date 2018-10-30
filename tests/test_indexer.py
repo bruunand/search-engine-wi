@@ -12,7 +12,7 @@ class IndexerTests(TestCase):
         self.indexer.index_text("This is a unit test for my reverse index implementation", 1)
 
     def test_frequency_null(self):
-        self.assertEqual(2, self.indexer.word_dict.get_frequency_in_document("test", 0))
+        self.assertEqual(2, self.indexer.term_dict.get_tf("test", 0))
 
     def test_and(self):
         self.assertIn(0, Query(self.indexer, 'anders AND langballe').get_matches())

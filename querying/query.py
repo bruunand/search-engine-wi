@@ -54,7 +54,7 @@ class Query:
         if token_type == TokenType.STRING:
             term = self._tokenizer.next().lower()
 
-            return self._indexer.word_dict.get_documents_with(term) if self._indexer.word_dict.has(term) else set()
+            return self._indexer.term_dict.get_documents_with_term(term) if self._indexer.term_dict.has(term) else set()
         elif token_type == TokenType.L_PAREN:
             # Proceed to next token
             self._tokenizer.next()

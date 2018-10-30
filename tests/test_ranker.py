@@ -8,6 +8,11 @@ from ranking.content_ranker import ContentRanker
 class RankerTests(TestCase):
     def setUp(self):
         indexer = Indexer()
+
+        # Add "URLs" to vocabulary
+        for _ in range(3):
+            indexer.url_vocabulary.add(None)
+
         indexer.index_text("This text mentions iPhone twice. iPhone.", 0)
         indexer.index_text("This text mentions iPhone thrice. iPhone, iphone! It should have the highest rank.", 1)
         indexer.index_text("This text only mentions iPhone once.", 2)

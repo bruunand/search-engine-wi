@@ -35,7 +35,7 @@ if __name__ == "__main__":
     while True:
         print("Querying..")
 
-        query = Query(indexer, "denmark")
+        query = Query(indexer, "anders")
 
         for id in query.get_matches():
             print(indexer.url_vocabulary.get(id))

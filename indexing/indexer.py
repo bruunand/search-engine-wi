@@ -32,58 +32,73 @@ class UrlVocabulary:
         return self._internal_dict[id] if id in self._internal_dict else None
 
 
-class WordDictionary:
+class TermDictionary:
     def __init__(self, url_vocabulary):
         self._internal_dict = dict()
         self._url_vocabulary = url_vocabulary
 
-    def add_occurrence(self, word, document_id):
-        if not self.has(word):
-            self._internal_dict[word] = dict()
+    def add_occurrence(self, term, document_id):
+        if not self.has(term):
+            self._internal_dict[term] = dict()
 
         # Check if document is part of the dictionary
-        if document_id not in self._internal_dict[word]:
-            self._internal_dict[word][document_id] = 0
+        if document_id not in self._internal_dict[term]:
+            self._internal_dict[term][document_id] = 0
 
-        self._internal_dict[word][document_id] += 1
+        self._internal_dict[term][document_id] += 1
 
-    def has(self, word):
-        return word in self._internal_dict
+    def has(self, term):
+        return term in self._internal_dict
 
-    """ Calculate idf. Logging is used to dampen its effect. """
-    def get_inverse_document_frequency(self, word):
-        return math.log10(len(self._url_vocabulary.get_document_ids()) / self.get_document_frequency(word))
+    """ Calculate the length of a document. """
+    def get_document_length(self, document):
+        length = 0
+
+        for term in self._internal_dict.keys():
+            length += self.get_tf(term, document)
+
+        return length
+
+    """ Calculates term frequency–inverse document frequency. """
+    def get_tf_idf(self, term, document):
+        return self.get_tf(term, document) * self.get_idf(term)
+
+    """ Calculate inverse document frequency. Logging is used to dampen its effect. """
+    def get_idf(self, term):
+        return math.log10(len(self._url_vocabulary.get_document_ids()) / self.get_df(term))
 
     """ Get the number of documents that the word appears in. """
-    def get_document_frequency(self, word):
-        return len(self.get_documents_with(word))
+    def get_df(self, term):
+        return len(self.get_documents_with_term(term))
 
-    """ Importance does not increase proportionally with frequency, so we use logging to damper the effect."""
-    def get_log_frequency_weight(self, word, document):
-        frequency = self.get_frequency_in_document(word, document)
+    """ Calculate log frequency weighting.
+        Importance does not increase proportionally with frequency, so we use logging to damper the effect.
+    """
+    def get_frequency_log_weighting(self, word, document):
+        frequency = self.get_tf(word, document)
 
         return 0 if not frequency else 1 + math.log10(frequency)
 
-    """ For some word, it will return a dictionary of documents IDs to the number of occurrences of that word. """
-    def get_frequency_in_document(self, word, document):
-        if not self.has(word):
+    """ Calculate term frequency for some term in some document. """
+    def get_tf(self, term, document):
+        if not self.has(term):
             return 0
 
-        if document not in self._internal_dict[word]:
+        if document not in self._internal_dict[term]:
             return 0
 
-        return self._internal_dict[word][document]
+        return self._internal_dict[term][document]
 
     """ For some word, it will return a set of document IDs that contain the specified word. """
-    def get_documents_with(self, word):
-        return set(self._internal_dict[word].keys())
+    def get_documents_with_term(self, term):
+        return set(self._internal_dict[term].keys())
 
 
 class Indexer:
     def __init__(self, unindexed_queue=None):
         self.indexing = False
         self.url_vocabulary = UrlVocabulary()
-        self.word_dict = WordDictionary(self.url_vocabulary)
+        self.term_dict = TermDictionary(self.url_vocabulary)
         self.document_ids = set()
         self._unindexed_queue = unindexed_queue
 
@@ -96,7 +111,7 @@ class Indexer:
 
         # Tokenize document and add tokens to word dictionary
         for token in tokenize(contents):
-            self.word_dict.add_occurrence(token, document_id)
+            self.term_dict.add_occurrence(token, document_id)
 
     """Performs indexing in the background"""
     def start_indexer(self):
