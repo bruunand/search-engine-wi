@@ -44,7 +44,5 @@ class ContentRanker:
 
         return _sort_scores(scores)
 
-    def iterate_documents(self):
-        for document in self._rank_list:
-            yield document
-
+    def top(self, n):
+        return self._rank_list[:n]

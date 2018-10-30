@@ -20,7 +20,7 @@ class RankerTests(TestCase):
         self.query = Query(indexer, "iphone")
 
     def test_simple_order(self):
-        rank_iterator = ContentRanker(self.query).iterate_documents()
+        rank_iterator = ContentRanker(self.query).top(3)
 
         self.assertEqual(1, next(rank_iterator))
         self.assertEqual(0, next(rank_iterator))

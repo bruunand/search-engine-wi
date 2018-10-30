@@ -1,7 +1,6 @@
 import math
 from threading import Thread
 
-from querying.query import Query
 from shared.tokenizer import tokenize
 
 
@@ -36,6 +35,21 @@ class TermDictionary:
     def __init__(self, url_vocabulary):
         self._internal_dict = dict()
         self._url_vocabulary = url_vocabulary
+        self._champion_list = dict()
+
+    # The only contender pruning approach I have implemented.
+    def update_champions(self, r=20):
+        self._champion_list = {term: dict() for term in self._internal_dict.keys()}
+
+        for term in self._champion_list:
+            # Get the docs which this term appears in
+            documents = self._internal_dict[term].keys()
+
+            # Compute the weights for these docs
+            weights = {doc: self.get_tf_idf(term, doc) for doc in documents}
+
+            # Tak the top R of these weights and use this as the champion list for the current term
+            self._champion_list[term] = sorted(weights, key=weights.get, reverse=True)[:r]
 
     def add_occurrence(self, term, document_id):
         if not self.has(term):
