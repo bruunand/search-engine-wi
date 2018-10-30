@@ -196,12 +196,12 @@ class Crawler:
                     # Get hyperlink from contents
                     hyperlinks = self.get_hyperlinks(soup, url)
 
-                    # Set outgoing links for current URL
-                    self.url_references[url] = hyperlinks
-
                     # Add hyperlinks to queue
                     for hyperlink in hyperlinks:
                         self.queue_raw_url(hyperlink)
+
+                    # Set outgoing links for current URL
+                    self.url_references[url] = hyperlinks
 
                     # Remove irrelevant tags
                     for tag in soup(["script", "style"]):

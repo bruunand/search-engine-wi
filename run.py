@@ -3,7 +3,9 @@ from threading import Thread
 
 from indexing.indexer import Indexer
 from querying.query import Query
+from ranking.pagerank import PageRank
 from webcrawling.crawler import Crawler
+from itertools import islice
 
 if __name__ == "__main__":
     crawler = Crawler()
@@ -40,4 +42,6 @@ if __name__ == "__main__":
         for id in query.get_matches():
             print(indexer.url_vocabulary.get(id))
 
-        time.sleep(1)
+        print("ranking...")
+        print(list(islice(PageRank(crawler).rank().keys(), 10)))
+        time.sleep(5)
