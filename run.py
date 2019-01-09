@@ -45,5 +45,5 @@ if __name__ == "__main__":
             print(indexer.url_vocabulary.get(id))
 
         print("ranking...")
-        # print(list(islice(PageRank(crawler).rank().keys(), 10)))
+        print(PageRank(crawler).rank()[:20])
         time.sleep(5)
