@@ -14,7 +14,6 @@ if __name__ == "__main__":
     crawler.queue_raw_url('http://www.aau.dk')
     crawler.queue_raw_url('http://www.anderslangballe.dk')
     crawler.queue_raw_url('https://twitter.com/alangballe')
-    crawler.queue_raw_url('https://twitter.com/anderslangballe')
 
     # Start logger thread
     def logger():
@@ -46,5 +45,5 @@ if __name__ == "__main__":
             print(indexer.url_vocabulary.get(id))
 
         print("ranking...")
-        print(list(islice(PageRank(crawler).rank().keys(), 10)))
+        # print(list(islice(PageRank(crawler).rank().keys(), 10)))
         time.sleep(5)
