@@ -105,6 +105,9 @@ class TermDictionary:
 
     """ For some word, it will return a set of document IDs that contain the specified word. """
     def get_documents_with_term(self, term):
+        if term not in self._internal_dict:
+            return set()
+
         return set(self._internal_dict[term].keys())
 
 

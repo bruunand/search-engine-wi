@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from indexing.indexer import Indexer
-from querying.query import Query
+from querying.boolean.boolean_query import BooleanQuery
 from ranking.content_ranker import ContentRanker
 
 
@@ -17,7 +17,7 @@ class RankerTests(TestCase):
         indexer.index_text("This text mentions iPhone thrice. iPhone, iphone! It should have the highest rank.", 1)
         indexer.index_text("This text only mentions iPhone once.", 2)
 
-        self.query = Query(indexer, "iphone")
+        self.query = BooleanQuery(indexer, "iphone")
 
     def test_simple_order(self):
         rank_iterator = ContentRanker(self.query).top(3)

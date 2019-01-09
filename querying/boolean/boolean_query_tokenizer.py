@@ -17,7 +17,7 @@ class TokenType(enum.Enum):
     ERROR = 6
 
 
-class Tokenizer:
+class BooleanQueryTokenizer:
     def __init__(self, query):
         self.index = 0
         self.tokens = [token.strip() for token in TokenizerRegex.split(query) if token.strip() != '']
@@ -77,6 +77,6 @@ class Tokenizer:
         return self._token_types[self.index]
 
     def is_next_operand(self):
-        next = self.peek_type()
+        next_type = self.peek_type()
 
-        return next == TokenType.AND or next == TokenType.OR
+        return next_type == TokenType.AND or next_type == TokenType.OR

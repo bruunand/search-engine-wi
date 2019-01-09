@@ -1,11 +1,10 @@
-from querying.query_tokenizer import Tokenizer, TokenType
+from querying.boolean.boolean_query_tokenizer import BooleanQueryTokenizer, TokenType
 
 
-class Query:
-    """ Note that a the matches of a query are ready as soon as init has finished. """
+class BooleanQuery:
     def __init__(self, indexer, query):
         self._indexer = indexer
-        self._tokenizer = Tokenizer(query)
+        self._tokenizer = BooleanQueryTokenizer(query)
         self._search_terms = self._tokenizer.get_search_terms()
         self._matches = self._parse()
 

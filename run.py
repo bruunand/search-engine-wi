@@ -1,17 +1,20 @@
 import time
+from itertools import islice
 from threading import Thread
 
 from indexing.indexer import Indexer
-from querying.query import Query
+from querying.free_text_query import FreeTextQuery
 from ranking.pagerank import PageRank
 from webcrawling.crawler import Crawler
-from itertools import islice
 
 if __name__ == "__main__":
     crawler = Crawler()
 
     # Add seed URLs
     crawler.queue_raw_url('http://www.aau.dk')
+    crawler.queue_raw_url('http://www.anderslangballe.dk')
+    crawler.queue_raw_url('https://twitter.com/alangballe')
+    crawler.queue_raw_url('https://twitter.com/anderslangballe')
 
     # Start logger thread
     def logger():
@@ -37,7 +40,7 @@ if __name__ == "__main__":
     while True:
         print("Querying..")
 
-        query = Query(indexer, "anders")
+        query = FreeTextQuery(indexer, "anders langballe jakobsen")
 
         for id in query.get_matches():
             print(indexer.url_vocabulary.get(id))

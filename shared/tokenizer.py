@@ -10,7 +10,6 @@ def get_disallowed_words():
 
 
 def tokenize(text):
-    # Tokenizes and stems word that are not in the set of disallowed words
-    tokenized = [stem(word) for word in word_tokenize(text) if word not in get_disallowed_words()]
+    """ Tokenizes and stems word that are not in the set of disallowed words """
+    return [stem(word) for word in word_tokenize(text) if word not in get_disallowed_words()]
 
-    return tokenized
