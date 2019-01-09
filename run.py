@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # Add seed URLs
     crawler.queue_raw_url('http://www.aau.dk')
     crawler.queue_raw_url('http://www.anderslangballe.dk')
-    crawler.queue_raw_url('https://twitter.com/alangballe')
+    crawler.queue_raw_url('http://www.reddit.com/r/worldnews')
 
     # Start logger thread
     def logger():

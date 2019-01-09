@@ -119,7 +119,7 @@ class Crawler:
         return self.host_robots[host]
 
     def request_url(self, url):
-        response = requests.get(url, headers=Crawler.BaseHeaders, timeout=5)
+        response = requests.get(url, headers=Crawler.BaseHeaders, timeout=30)
 
         # If we were redirected, we can also say that this URL has been crawled
         self.seen_urls.add(response.url)
@@ -177,7 +177,6 @@ class Crawler:
             self.unindexed.put((url, soup.text))
         except Exception as e:
             getLogger().error(f'Worker exception: {e}')
-            print("failed:" + url)
             return False
 
         return True
@@ -239,7 +238,7 @@ class Crawler:
     def stop_crawlers(self):
         self.crawling = False
 
-    def __init__(self, threads=10, num_front_queues=1):
+    def __init__(self, threads=3, num_front_queues=1):
         self.crawling = False
         self.threads = threads
 
