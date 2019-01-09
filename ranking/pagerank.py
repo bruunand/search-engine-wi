@@ -1,6 +1,3 @@
-from copy import deepcopy
-
-import networkx as nx
 import numpy as np
 
 
@@ -8,47 +5,37 @@ class PageRank:
     def __init__(self, crawler):
         self.crawler = crawler
 
-    def rank(self):
-        graph, idx_to_url = self.construct_graph()
-        pr = nx.pagerank(graph, alpha=0.85)  # 0.15 probability of teleportation
+    def rank(self, alpha=0.15, max_iterations=1000):
+        # Ensure that we have some URLs with references
+        if not self.crawler.url_references:
+            return []
 
-        return {idx_to_url[idx]: value for idx, value in pr.items()}
+        M, idx_to_url = self.construct_matrix(alpha=alpha)
 
-    """ Constructs the directed graph to be used by NetworkX. """
-    def construct_graph(self):
+        # In initial state, equally probable to visit any other link
+        state = np.full(len(idx_to_url), 1 / len(idx_to_url))
+
+        # Iterate until convergence
+        for i in range(max_iterations):
+            old_state = state
+            state = np.matmul(old_state, M)
+
+            # Check if state has reached a stationary position
+            if np.allclose(state, old_state):
+                print(f'Finished at iteration {i}')
+
+                break
+
+        top_indices = np.argsort(state)[::-1]
+        top_urls = [(idx_to_url[idx], state[idx]) for idx in top_indices]
+
+        return top_urls
+
+    """ Constructs the transition probability matrix """
+    def construct_matrix(self, alpha):
         # Get URLs that have been seen (not necessarily visited)
-        urls = deepcopy(self.crawler.seen_urls)
-
-        # Maintain a mapping from URLs to their index
-        url_to_idx = dict()
-        for idx, url in enumerate(urls):
-            url_to_idx[url] = idx
-
-        # Construct graph with edges
-        graph = nx.DiGraph()
-
-        # For each URL, add an edge to its outgoing URLs
-        for idx, url in enumerate(urls):
-            # Ignore URLs which we do not have references for
-            if url not in self.crawler.url_references:
-                continue
-
-            references = self.crawler.url_references[url]
-            # Ignore URLs which reference no URLs
-            if not references:
-                continue
-
-            # For each referenced URL, add an edge from current URL to that URL
-            for ref_url in references:
-                graph.add_edge(idx, url_to_idx[ref_url])
-
-        # Return the graph and an index to url mapping
-        return graph, {idx: url for url, idx in url_to_idx.items()}
-
-    """ Constructs the transition probability matrix. """
-    def construct_matrix(self):
-        # Get URLs that have been seen (not necessarily visited)
-        urls = self.crawler.seen_urls
+        all_references = self.crawler.url_references
+        urls = all_references.keys()  # self.crawler.seen_urls
 
         # Maintain a mapping from URLs to their index
         url_to_idx = dict()
@@ -61,19 +48,36 @@ class PageRank:
         # For each URL, determine the possibility of transitioning and update the matrix
         for url in urls:
             # Ignore URLs which we do not have references for
-            if url not in self.crawler.url_references:
+            if url not in all_references:
                 continue
 
-            references = self.crawler.url_references[url]
-            # Ignore URLs which reference no URLs
+            # Get the references for this URL
+            # Intersection used to get only references to URLs that we have visited
+            references = all_references[url].intersection(urls)
+
+            # Row-wise construction depends on whether the page is dangling
             if not references:
-                continue
+                # Dangling pages have equal probability of visiting any URL
+                # This could also be fixed by replacing zero-sum rows in transition probability matrix
+                for i in range(len(urls)):
+                    matrix[url_to_idx[url]][i] = 1 / len(urls)
+            else:
+                out_degree = len(references)
 
-            out_degree = len(references)
+                # For each referenced URL, calculate the possibility of visiting it
+                for ref_url in references:
+                    probability = 1 / out_degree
+                    matrix[url_to_idx[url]][url_to_idx[ref_url]] = probability
 
-            # For each referenced URL, calculate the possibility of visiting it
-            for ref_url in references:
-                matrix[url_to_idx[url]][url_to_idx[ref_url]] = 1 / out_degree
-                print(matrix[url_to_idx[url]][url_to_idx[ref_url]])
+        # Allow our surfers to randomly surf to unlinked pages
+        tp_matrix = np.full(matrix.shape, 1 / len(urls))
 
-        return matrix
+        # Provide an invert mapping that can be used to get URl from index
+        idx_to_url = {v: k for k, v in url_to_idx.items()}
+
+        # P_PageRank = (1 - alpha) * P + alpha * U
+        return (1 - alpha) * matrix + alpha * tp_matrix, idx_to_url
+
+
+if __name__ == "__main__":
+    PageRank(None).rank()

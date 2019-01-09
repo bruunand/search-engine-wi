@@ -16,3 +16,10 @@ Group participants:
 ## Individual document indexing
 - Whenever I perform an index, I only index one document at once
 - This means I don't do the core step of sorting (Term, Document ID) pairs
+
+## PageRank
+- Initialize, I saved references from hosts to themselves
+- I was seeing some highly specific URLs and I was hoping I could get more general, shorter URLs
+- It helped, but I still have the problem that a host like Twitter references `help.twitter.com` many times
+- I then changed it to extract the TLD (top-level domain) with suffix, which gave much better results
+- Still had the problem that sites like `aau.dk` reference their social media a lot. Less of a problem at a larger scale

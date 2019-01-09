@@ -6,7 +6,7 @@ from logging import getLogger
 from multiprocessing.sharedctypes import synchronized
 from queue import Queue, Empty
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
-
+from tld import get_tld
 import requests
 from bs4 import BeautifulSoup
 
@@ -158,8 +158,16 @@ class Crawler:
                 self.queue_raw_url(hyperlink)
 
             # Set outgoing links for current URL
-            # TODO: Remove links to own host
-            self.url_references[url] = hyperlinks
+            references = set()
+            referencing_tld = get_tld(url, fail_silently=True)
+            for hyperlink in hyperlinks:
+                referenced_tld = get_tld(hyperlink, fail_silently=True)
+
+                if referenced_tld != referencing_tld:
+                    references.add(hyperlink)
+
+            # Only add references that are not referenced by the same host
+            self.url_references[url] = references
 
             # Remove irrelevant tags
             for tag in soup(["script", "style"]):
@@ -231,7 +239,7 @@ class Crawler:
     def stop_crawlers(self):
         self.crawling = False
 
-    def __init__(self, threads=3, num_front_queues=1):
+    def __init__(self, threads=10, num_front_queues=1):
         self.crawling = False
         self.threads = threads
 
