@@ -19,7 +19,6 @@ class BackHeap:
     Pop host returns a tuple (time_to_wait, host) where time to wait indicates how many seconds before
     the host can be crawled again, allowing the caller to sleep for that duration.
     '''
-
     def pop_host(self):
         with self.lock:
             # If heap is empty, return None
@@ -35,7 +34,6 @@ class BackHeap:
     Add the host to the heap. If delay is specified (typically after the host has been visited) we need to specify
     when the host can be visited again.
     '''
-
     def push_host(self, new_host, delay=True):
         with self.lock:
             # If host is already in heap, do not push it
@@ -50,3 +48,6 @@ class BackHeap:
 
     def get_hosts(self):
         return [item[1] for item in self.heap]
+
+    def __contains__(self, item):
+        return item in self.get_hosts()

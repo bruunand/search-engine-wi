@@ -3,6 +3,7 @@ import random
 import threading
 import time
 from logging import getLogger
+from multiprocessing.sharedctypes import synchronized
 from queue import Queue, Empty
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
 
@@ -27,26 +28,22 @@ def log_on_failure(func):
 class Crawler:
     UserAgent = 'Kekbot'
     BaseHeaders = {'User-Agent': UserAgent}
-    WorkerThreads = 10
 
-    @staticmethod
-    def _normalize_url(url, referer=None):
+    def normalize_url(self, url, referer=None):
+        """ Normalizes URL, expands relative URLs to absolute ones """
         # Expand relative links
         if referer:
             url = urljoin(referer, url)
 
-        # Convert protocol and host to lower case
+        # Converts protocol and host to lower case
         url = urlsplit(url).geturl()
 
         # Decode percent-encoded octets of unreserved characters
         url = unquote(url)
 
-        # TODO: Capitalize letters in escape sequences
-        # Probably unnecessary, given that the URL is unquoted
-
         return url
 
-    def move_from_front(self):
+    def pick_from_front(self):
         # Randomly select which a front queue
         priority = random.randint(0, self.num_front_queues - 1)
         selected_queue = self.front_queues[priority]
@@ -57,13 +54,7 @@ class Crawler:
         except Empty:
             return False
 
-        # Get host from URL
-        host = urlparse(url).netloc
-
-        # Add to associated back queue
-        back_queue = self.back_queues[host]
-        if back_queue:
-            back_queue.put(url)
+        return url
 
     def add_to_frontier(self, url):
         # Add the URL to a random front queue
@@ -78,13 +69,24 @@ class Crawler:
             else:
                 self.seen_urls.add(url)
 
-        # If host is unseen, create back queue and heap entry
-        host = urlparse(url).netloc
-        if host not in self.back_queues:
-            self.back_queues[host] = Queue()
+        # If host is unseen, assign it to a back queue
+        parsed_url = urlparse(url)
+        host = parsed_url.netloc
 
-            # If the host has not been seen before, we can push it to the heap and make it ready immediately
-            self.back_heap.push_host(host, delay=False)
+        # Check if we can visit this URL
+        if not self.get_robots_parser(host).can_access(parsed_url.path, user_agent=self.UserAgent):
+            return
+
+        # For initial hosts, create a back queue and heap entry for them
+        with self.lock:
+            if len(self.back_queues) < self.num_back_queues and host not in self.back_heap:
+                queue = Queue()
+
+                # Our seeds get "special treatment" by instantly being put in a back queue
+                queue.put(url)
+                self.host_queue_map[host] = queue
+                self.back_queues.add(queue)
+                self.back_heap.push_host(host, delay=False)
 
         self.add_to_frontier(url)
 
@@ -99,7 +101,7 @@ class Crawler:
                 if href.startswith(start):
                     break
             else:
-                hyperlinks.add(self._normalize_url(href, referer))
+                hyperlinks.add(self.normalize_url(href, referer))
 
         return hyperlinks
 
@@ -129,9 +131,51 @@ class Crawler:
         else:
             return response.text, response.url
 
-    """ Runs a number of crawlers which will run indefinitely. """
+    def fetch_url(self, url):
+        """ Fetches a URL, performs parsing of it, passes to indexer and saves outgoing links """
+        try:
+            self.num_requests += 1
+
+            # Get contents of extracted URL
+            text, url = self.request_url(url)
+            if not text or not url:
+                getLogger().error(f'Failed to get {url}')
+
+                return False
+
+            # Parse with BS4
+            soup = BeautifulSoup(text, 'lxml')
+            if not soup:
+                getLogger().error(f'Could not parse {url}')
+
+                return False
+
+            # Get hyperlink from contents
+            hyperlinks = self.get_hyperlinks(soup, url)
+
+            # Add hyperlinks to queue
+            for hyperlink in hyperlinks:
+                self.queue_raw_url(hyperlink)
+
+            # Set outgoing links for current URL
+            # TODO: Remove links to own host
+            self.url_references[url] = hyperlinks
+
+            # Remove irrelevant tags
+            for tag in soup(["script", "style"]):
+                tag.extract()
+
+            # Add to set of un-indexed pages
+            self.unindexed.put((url, soup.text))
+        except Exception as e:
+            getLogger().error(f'Worker exception: {e}')
+            print("failed:" + url)
+            return False
+
+        return True
 
     def start_crawlers(self):
+        """ Runs a number of crawlers which will run indefinitely. """
         self.crawling = True
 
         # Could principally not be a nested function, but it's nested to discourage calling from main thread
@@ -155,74 +199,41 @@ class Crawler:
                     time.sleep(wait_time)
 
                 # Look up back queue associated with host
-                if host not in self.back_queues:
-                    getLogger().error(f'No back queue entry for host {host}')
+                back_queue = self.host_queue_map[host]
 
-                    continue
+                # Pull URL from back queue and fetch its contents
+                self.fetch_url(back_queue.get())
 
-                # Pull URL to visit from back queue, continue until the back queue is non-empty
-                back_queue = self.back_queues[host]
+                # Refill the back queue if necessary
                 while back_queue.empty():
-                    self.move_from_front()
+                    # Pull a URl from a prioritised front queue
+                    url = self.pick_from_front()
+                    new_host = urlparse(url).netloc
 
-                # Pull URL from non-empty back queue
-                url = back_queue.get()
+                    # Check if the new host has an existing back queue
+                    with self.lock:
+                        existing = self.host_queue_map.get(new_host)
 
-                try:
-                    # Check if we are allowed to visit the URL
-                    url_path = urlparse(url).path
-                    if not self.get_robots_parser(host).can_access(url_path, user_agent=self.UserAgent):
-                        # getLogger().error(f'Not allowed to visit {url}')
+                        if existing:
+                            existing.put(url)
+                        else:
+                            # Update the current back queue to support the new URL
+                            host = new_host
+                            self.host_queue_map[host] = back_queue
+                            back_queue.put(url)
 
-                        continue
-
-                    # Increment request counter
-                    self.num_requests += 1
-
-                    # Get contents of extracted URL
-                    text, url = self.request_url(url)
-                    if not text or not url:
-                        getLogger().error(f'Failed to get {url}')
-
-                        continue
-
-                    # Parse with BS4
-                    soup = BeautifulSoup(text, 'lxml')
-                    if not soup:
-                        getLogger().error(f'Could not parse {url}')
-
-                        continue
-
-                    # Get hyperlink from contents
-                    hyperlinks = self.get_hyperlinks(soup, url)
-
-                    # Add hyperlinks to queue
-                    for hyperlink in hyperlinks:
-                        self.queue_raw_url(hyperlink)
-
-                    # Set outgoing links for current URL
-                    self.url_references[url] = hyperlinks
-
-                    # Remove irrelevant tags
-                    for tag in soup(["script", "style"]):
-                        tag.extract()
-
-                    self.unindexed.put((url, soup.text))
-                except Exception as e:
-                    getLogger().error(f'Worker exception: {e}')
-                finally:
-                    # Even an exception occurs, push back the host to the heap
-                    self.back_heap.push_host(host, delay=True)
-
-        for i in range(self.WorkerThreads):
+                # Add entry to heap
+                self.back_heap.push_host(host, delay=True)
+        for i in range(self.threads):
             thread = threading.Thread(target=_crawl)
             thread.start()
 
     def stop_crawlers(self):
         self.crawling = False
 
-    def __init__(self, num_front_queues=1):
+    def __init__(self, threads=3, num_front_queues=1):
         self.crawling = False
+        self.threads = threads
 
         # Maintain a dictionary from URLs to their referenced URLs
         self.url_references = dict()
@@ -239,13 +250,10 @@ class Crawler:
         # Back heap
         self.back_heap = BackHeap()
 
-        # Maintain a map of hosts and their back queues
-        self.back_queues = dict()
-
         # Maintain a set of seen URLs to avoid redundant crawling
         self.seen_urls = set()
 
-        # Maintains a queue of unindexed text
+        # Maintains a queue of un-indexed text
         self.unindexed = Queue()
 
         # Maintain a mapping of prioritised front queues
@@ -253,6 +261,13 @@ class Crawler:
         self.front_queues = dict()
         for priority in range(num_front_queues):
             self.front_queues[priority] = Queue()
+
+        # Maintain a mapping from hosts to their back queue
+        self.host_queue_map = dict()
+
+        # Maintain a set of back queues
+        self.back_queues = set()
+        self.num_back_queues = threads * 3
 
 
 '''

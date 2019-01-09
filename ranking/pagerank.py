@@ -1,7 +1,8 @@
-import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
 from copy import deepcopy
+
+import networkx as nx
+import numpy as np
+
 
 class PageRank:
     def __init__(self, crawler):
