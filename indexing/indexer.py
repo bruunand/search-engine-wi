@@ -37,7 +37,7 @@ class TermDictionary:
         self._url_vocabulary = url_vocabulary
         self._champion_list = dict()
 
-    # The only contender pruning approach I have implemented.
+    # The only contender pruning approach I have implemented
     def update_champions(self, r=20):
         self._champion_list = {term: dict() for term in self._internal_dict.keys()}
 
@@ -55,7 +55,7 @@ class TermDictionary:
         if not self.has(term):
             self._internal_dict[term] = dict()
 
-        # Check if document is part of the dictionary
+        # Add document to the term's postings list if not existing
         if document_id not in self._internal_dict[term]:
             self._internal_dict[term][document_id] = 0
 
