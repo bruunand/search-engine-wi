@@ -20,8 +20,8 @@ if __name__ == "__main__":
     # PageRank the URL references
     print('Performing PageRank')
     page_rank = PageRank(url_references)
-    for url, probability in page_rank.rank()[:10]:
-        print(f'{probability}: {url}')
+    for index, url in enumerate(page_rank.rank()[:10]):
+        print(f'{index + 1}. {url[0]}')
 
     # Iteratively accept user input
     while True:
@@ -29,11 +29,10 @@ if __name__ == "__main__":
 
         # Construct query
         query = FreeTextQuery(indexer, query_string)
-        print(query.get_matches())
 
         # Rank with cosine score
         content_ranker = ContentRanker(query)
 
         # Print results
-        for document, score in content_ranker.top(10):
-            print(f'{score}: {document}')
+        for index, document in enumerate(content_ranker.top(10)):
+            print(f'{index + 1}. {document[0]}')
