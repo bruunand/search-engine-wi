@@ -23,3 +23,9 @@ Group participants:
 - It helped, but I still have the problem that a host like Twitter references `help.twitter.com` many times
 - I then changed it to extract the TLD (top-level domain) with suffix, which gave much better results
 - Still had the problem that sites like `aau.dk` reference their social media a lot. Less of a problem at a larger scale
+
+## Duplicate prevention
+- I disregard the size of fingerprints. Whereas a 64-bit hashing function would be good for super shingles, and a 48-bit
+hashing function good for super shingles, I use the same hashing function base for both 
+- Python's hashing functions are re-generated on each run (for security purposes), so in practice I would need a hashing
+algorithm which is consistent across runs
