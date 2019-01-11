@@ -4,6 +4,13 @@ Multi-threaded webcrawler made as a part of the Web Intelligence course at AAU. 
 Group participants:
 * Anders Langballe Jakobsen
 
+## Pre-processing
+- Even after stemming and removing stopwords, I obviously still get a lot of gibberish terms
+- Example pairs: `('�W�', 97), ('�W�', 97), ('�W�', 97), ('�W�', 125), ('�W�', 125)`
+- Further investigation revealed that these were sourced from PDF files
+  - Obviously, these need special treatment
+- It's difficult to filter these our (are they syntactically valid in some language?)
+- I've iteratively removed symbols like `@` and `#`. Probably a good idea to find a comprehensive list instead
 ## Postings list data structure
 - Postings lists are stored as Python dictionaries
   - Allows us to store the frequency of the term for each document the term appears in

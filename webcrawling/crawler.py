@@ -240,7 +240,7 @@ class Crawler:
     def stop_crawlers(self):
         self.crawling = False
 
-    def __init__(self, threads=10, num_front_queues=1):
+    def __init__(self, threads=40, num_front_queues=1):
         self.crawling = False
         self.threads = threads
 

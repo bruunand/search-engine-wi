@@ -1,5 +1,4 @@
 import math
-from threading import Thread
 
 from shared.tokenizer import tokenize
 
@@ -32,18 +31,20 @@ class UrlVocabulary:
 
 
 class TermDictionary:
+    """ Provide an abstraction over term-postings dictionary """
     def __init__(self, url_vocabulary):
-        self._internal_dict = dict()
+        self._term_postings = dict()
         self._url_vocabulary = url_vocabulary
         self._champion_list = dict()
+        self._url_length_dict = dict()
 
     # The only contender pruning approach I have implemented
     def update_champions(self, r=20):
-        self._champion_list = {term: dict() for term in self._internal_dict.keys()}
+        self._champion_list = {term: dict() for term in self._term_postings.keys()}
 
         for term in self._champion_list:
             # Get the docs which this term appears in
-            documents = self._internal_dict[term].keys()
+            documents = self._term_postings[term].keys()
 
             # Compute the weights for these docs
             weights = {doc: self.get_tf_idf(term, doc) for doc in documents}
@@ -51,27 +52,20 @@ class TermDictionary:
             # Tak the top R of these weights and use this as the champion list for the current term
             self._champion_list[term] = sorted(weights, key=weights.get, reverse=True)[:r]
 
-    def add_occurrence(self, term, document_id):
-        if not self.has(term):
-            self._internal_dict[term] = dict()
-
-        # Add document to the term's postings list if not existing
-        if document_id not in self._internal_dict[term]:
-            self._internal_dict[term][document_id] = 0
-
-        self._internal_dict[term][document_id] += 1
+    def set_term_postings(self, term_postings):
+        self._term_postings = term_postings
 
     def has(self, term):
-        return term in self._internal_dict
+        return term in self._term_postings
+
+    def set_document_lengths(self, document_length_docs):
+        self._url_length_dict = document_length_docs
 
     """ Calculate the length of a document. """
     def get_document_length(self, document):
-        length = 0
-
-        for term in self._internal_dict.keys():
-            length += self.get_tf(term, document)
-
-        return length
+        # I originally iterated over the term postings dict and summed
+        # That approach was simply too slow
+        return self._url_length_dict[document]
 
     """ Calculates term frequency–inverse document frequency. """
     def get_tf_idf(self, term, document):
@@ -98,33 +92,73 @@ class TermDictionary:
         if not self.has(term):
             return 0
 
-        if document not in self._internal_dict[term]:
+        if document not in self._term_postings[term]:
             return 0
 
-        return self._internal_dict[term][document]
+        return self._term_postings[term][document]
 
     """ For some word, it will return a set of document IDs that contain the specified word. """
     def get_documents_with_term(self, term):
-        if term not in self._internal_dict:
+        if term not in self._term_postings:
             return set()
 
-        return set(self._internal_dict[term].keys())
+        return set(self._term_postings[term].keys())
 
 
 class Indexer:
     def __init__(self):
-        self.indexing = False
         self.url_vocabulary = UrlVocabulary()
         self.term_dict = TermDictionary(self.url_vocabulary)
-        self.document_ids = set()
 
-    def index_text(self, contents, document_id):
-        if document_id not in self.document_ids:
-            self.document_ids.add(document_id)
+    def index_corpus(self, url_content_dict):
+        """ Performs indexing over an entire corpus, e.g. a dictionary from URls to content """
+        # At this point, markup has been removed, but we still need to tokenize
+        url_token_dict = {url: tokenize(contents) for url, contents in url_content_dict.items()}
 
-        # Convert contents to lowercase
-        contents = contents.lower()
+        # Add URLs to url vocabulary to get an index representation
+        url_index_dict = {url: self.url_vocabulary.add(url) for url in url_token_dict}
 
-        # Tokenize document and add tokens to word dictionary
-        for token in tokenize(contents):
-            self.term_dict.add_occurrence(token, document_id)
+        # Make a dictionary of the lengths of documents
+        document_length_dict = {url_index_dict[url]: len(tokens) for url, tokens in url_token_dict.items()}
+        self.term_dict.set_document_lengths(document_length_dict)
+
+        # Construct (term, docId) pairs
+        pairs = list()
+        for url, tokens in url_token_dict.items():
+            for token in tokens:
+                pairs.append((token, url_index_dict[url]))
+
+        # Sort pairs by term, then docId
+        # Python automatically does this for lists of pairs
+        pairs = sorted(pairs)
+
+        # Construct the dictionary of terms and their postings
+        term_postings = dict()
+
+        # Iterate over pairs in order
+        current_term = None
+        for term, doc_id in pairs:
+            # When a new term is found, change current term to it and initialize dictionary
+            if term != current_term:
+                current_term = term
+                term_postings[current_term] = dict()
+
+            # The postings are dictionaries mapping document to frequency
+            # We either increment the value part of the posting or set it to 1
+            term_postings[term][doc_id] = term_postings[term].get(doc_id, 0) + 1
+
+        self.term_dict.set_term_postings(term_postings)
+
+
+if __name__ == "__main__":
+    # Sanity tests...
+    url_contents = {'google.com': 'here is a sample text',
+                    'yahoo.com': 'another sample text'}
+
+    indexer = Indexer()
+    indexer.index_corpus(url_contents)
+
+    assert(indexer.term_dict.get_df('text') == 2)
+    assert(indexer.term_dict.get_document_length(1) == 3)
+
+
