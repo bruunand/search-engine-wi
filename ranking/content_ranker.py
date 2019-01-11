@@ -1,3 +1,6 @@
+import math
+
+
 def _sort_scores(document_scores):
     return sorted(document_scores, key=lambda x: x[1], reverse=True)
 
@@ -35,17 +38,24 @@ class ContentRanker:
         # Find the set of relevant documents by disjunction
         relevant = self._query.get_matches()
         scores = {doc: 0 for doc in relevant}
+        lengths = {doc: 0 for doc in relevant}
 
         # Disregards the frequency of terms in queries and assumes they only occur once
+        search_terms = set(self._query.get_search_terms())
         for term in set(self._query.get_search_terms()):
             for doc in relevant:
                 scores[doc] += indexer.term_dict.get_tf_idf(term, doc)
+
+        # Calculate document vector lengths
+        for doc in relevant:
+            squared_sum = sum([pow(indexer.term_dict.get_tf(term, doc), 2) for term in search_terms])
+            lengths[doc] = math.sqrt(squared_sum)
 
         # Normalize scores wrt doc lengths
         # We are not normalizing wrt query lengths because it is a constant, i.e. would not change ordering
         # Thus, we are assuming no weighting no query term and that each query term occurs once
         url = indexer.url_vocabulary.get
-        scores = [(url(doc), scores[doc] / indexer.term_dict.get_document_length(doc)) for doc in relevant]
+        scores = [(url(doc), scores[doc] / lengths[doc]) for doc in relevant]
 
         return _sort_scores(scores)
 

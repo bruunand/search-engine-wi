@@ -36,7 +36,6 @@ class TermDictionary:
         self._term_postings = dict()
         self._url_vocabulary = url_vocabulary
         self._champion_list = dict()
-        self._url_length_dict = dict()
 
     # The only contender pruning approach I have implemented
     def update_champions(self, r=20):
@@ -57,15 +56,6 @@ class TermDictionary:
 
     def has(self, term):
         return term in self._term_postings
-
-    def set_document_lengths(self, document_length_docs):
-        self._url_length_dict = document_length_docs
-
-    """ Calculate the length of a document. """
-    def get_document_length(self, document):
-        # I originally iterated over the term postings dict and summed
-        # That approach was simply too slow
-        return self._url_length_dict[document]
 
     """ Calculates term frequency–inverse document frequency. """
     def get_tf_idf(self, term, document):
@@ -144,27 +134,3 @@ class Indexer:
             term_postings[term][doc_id] = term_postings[term].get(doc_id, 0) + 1
 
         self.term_dict.set_term_postings(term_postings)
-
-        # Make a dictionary of the vector length of documents
-        # I pre-compute these vector lengths because it's quite expensive to compute do with the inverse index
-        document_length_dict = dict()
-        for url, tokens in url_token_dict.items():
-            document_id = url_index_dict[url]
-            squared_sum = sum([pow(self.term_dict.get_tf(token, document_id), 2) for token in tokens])
-            document_length_dict[document_id] = math.sqrt(squared_sum)
-
-        self.term_dict.set_document_lengths(document_length_dict)
-
-
-if __name__ == "__main__":
-    # Sanity tests...
-    url_contents = {'google.com': 'here is a sample text',
-                    'yahoo.com': 'another sample text'}
-
-    indexer = Indexer()
-    indexer.index_corpus(url_contents)
-
-    assert(indexer.term_dict.get_df('text') == 2)
-    assert(indexer.term_dict.get_document_length(1) == 3)
-
-
