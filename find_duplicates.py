@@ -3,7 +3,7 @@ import pickle
 from duplicates.minhash import generate_hash_functions, get_min_hashes
 from duplicates.shingles import get_shingles, get_supershingles
 
-min_overlap = 2  # At least 2 supershingles must overlap
+min_overlap = 10  # At least 5 supershingles must overlap
 url_supershingles = dict()
 
 

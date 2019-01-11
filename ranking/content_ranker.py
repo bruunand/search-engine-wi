@@ -31,7 +31,6 @@ class ContentRanker:
 
     def _rank_cosine_score(self):
         indexer = self._query.get_indexer()
-        document_ids = indexer.url_vocabulary.get_document_ids()
 
         # Find the set of relevant documents by disjunction
         relevant = self._query.get_matches()
@@ -44,6 +43,7 @@ class ContentRanker:
 
         # Normalize scores wrt doc lengths
         # We are not normalizing wrt query lengths because it is a constant, i.e. would not change ordering
+        # Thus, we are assuming no weighting no query term and that each query term occurs once
         url = indexer.url_vocabulary.get
         scores = [(url(doc), scores[doc] / indexer.term_dict.get_document_length(doc)) for doc in relevant]
 

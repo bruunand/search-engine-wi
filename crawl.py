@@ -1,9 +1,8 @@
-import sys
 import time
+from pickle import dump
 from threading import Thread
 
 from webcrawling.crawler import Crawler
-from pickle import dump
 
 if __name__ == "__main__":
     crawler = Crawler()
@@ -26,7 +25,7 @@ if __name__ == "__main__":
             time.sleep(5)
 
             # If a certain content length has been reached, terminate
-            if len(crawler.url_contents) > 5000:
+            if len(crawler.url_contents) > 500:
                 print('Dumping contents and references...')
                 dump(crawler.url_contents, open('contents.p', 'wb'))
                 dump(crawler.url_references, open('references.p', 'wb'))

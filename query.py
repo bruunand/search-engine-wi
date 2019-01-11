@@ -13,10 +13,12 @@ if __name__ == "__main__":
     url_references = pickle.load(open('references.p', 'rb'))
 
     # Perform indexing on the corpus
+    print(f'Indexing {len(url_references)} documents')
     indexer = Indexer()
     indexer.index_corpus(url_contents_dict)
 
     # PageRank the URL references
+    print('Performing PageRank')
     page_rank = PageRank(url_references)
     for url, probability in page_rank.rank()[:10]:
         print(f'{probability}: {url}')
