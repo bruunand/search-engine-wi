@@ -4,6 +4,7 @@ from indexing.indexer import Indexer
 from querying.free_text_query import FreeTextQuery
 from ranking.content_ranker import ContentRanker
 from ranking.pagerank import PageRank
+from loguru import logger
 
 if __name__ == "__main__":
     # Load corpus from file
@@ -13,18 +14,18 @@ if __name__ == "__main__":
     url_references = pickle.load(open('references.p', 'rb'))
 
     # Perform indexing on the corpus
-    print(f'Indexing {len(url_references)} documents')
+    logger.info(f'Indexing {len(url_references)} documents')
     indexer = Indexer()
     indexer.index_corpus(url_contents_dict)
 
     # PageRank the URL references
-    print('Performing PageRank')
+    logger.info('Performing PageRank')
     page_rank = PageRank(url_references)
     for index, url in enumerate(page_rank.rank()[:10]):
         print(f'{index + 1}. {url[0]}')
 
     # Compute champion list
-    print('Updating champion list')
+    logger.info('Updating champion list')
     indexer.term_dict.update_champions(r=20)
 
     # Iteratively accept user input

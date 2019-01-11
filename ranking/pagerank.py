@@ -1,4 +1,5 @@
 import numpy as np
+from loguru import logger
 
 
 class PageRank:
@@ -22,7 +23,7 @@ class PageRank:
 
             # Check if state has reached a stationary position
             if np.allclose(state, old_state):
-                print(f'PageRank converged at iteration {i}')
+                logger.info(f'PageRank converged at iteration {i}')
 
                 break
 
