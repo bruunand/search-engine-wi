@@ -13,6 +13,7 @@ class BackHeap:
         self.lock = threading.Lock()
         self.heap = []
         self.delay = delay
+        self.history = set()
 
     '''
     The heap consists of pairs (time, host) where time specifies when the host can be crawled again.
@@ -35,6 +36,9 @@ class BackHeap:
     when the host can be visited again.
     '''
     def push_host(self, new_host, delay=True):
+        if new_host not in self.history:
+            self.history.add(new_host)
+
         with self.lock:
             # If host is already in heap, do not push it
             if new_host in self.get_hosts():

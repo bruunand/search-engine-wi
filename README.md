@@ -29,3 +29,8 @@ Group participants:
 hashing function good for super shingles, I use the same hashing function base for both 
 - Python's hashing functions are re-generated on each run (for security purposes), so in practice I would need a hashing
 algorithm which is consistent across runs
+
+## Front queue prioritization
+- I have not implemented prioritization in front queues. It uses a random system which is really no better than having
+one large queue
+- Why not? Didn't want to write a heuristic for "important" websites

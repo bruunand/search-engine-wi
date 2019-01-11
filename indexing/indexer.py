@@ -112,12 +112,11 @@ class TermDictionary:
 
 
 class Indexer:
-    def __init__(self, unindexed_queue=None):
+    def __init__(self):
         self.indexing = False
         self.url_vocabulary = UrlVocabulary()
         self.term_dict = TermDictionary(self.url_vocabulary)
         self.document_ids = set()
-        self._unindexed_queue = unindexed_queue
 
     def index_text(self, contents, document_id):
         if document_id not in self.document_ids:
@@ -129,22 +128,3 @@ class Indexer:
         # Tokenize document and add tokens to word dictionary
         for token in tokenize(contents):
             self.term_dict.add_occurrence(token, document_id)
-
-    """Performs indexing in the background"""
-    def start_indexer(self):
-        self.indexing = True
-
-        def _indexer():
-            while self.indexing:
-                url, contents = self._unindexed_queue.get()
-
-                # Get document id
-                document_id = self.url_vocabulary.add(url)
-
-                self.index_text(contents, document_id)
-
-        thread = Thread(target=_indexer)
-        thread.start()
-
-    def stop_indexer(self):
-        self.indexing = False
