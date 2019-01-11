@@ -23,6 +23,10 @@ if __name__ == "__main__":
     for index, url in enumerate(page_rank.rank()[:10]):
         print(f'{index + 1}. {url[0]}')
 
+    # Compute champion list
+    print('Updating champion list')
+    indexer.term_dict.update_champions(r=20)
+
     # Iteratively accept user input
     while True:
         query_string = input('Enter free text query:')

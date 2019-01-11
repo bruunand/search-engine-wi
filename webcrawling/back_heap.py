@@ -9,7 +9,7 @@ def _current_time_millis():
 
 
 class BackHeap:
-    def __init__(self, delay=1000):
+    def __init__(self, delay=3000):
         self.lock = threading.Lock()
         self.heap = []
         self.delay = delay

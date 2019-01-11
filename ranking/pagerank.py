@@ -5,12 +5,12 @@ class PageRank:
     def __init__(self, url_references):
         self.url_references = url_references
 
-    def rank(self, alpha=0.15, max_iterations=1000):
+    def rank(self, alpha=0.15, max_iterations=100):
         # Ensure that we have some URLs with references
         if not self.url_references:
             return []
 
-        M, idx_to_url = self.construct_matrix(alpha=alpha)
+        matrix, idx_to_url = self.construct_matrix(alpha=alpha)
 
         # In initial state, equally probable to visit any other link
         state = np.full(len(idx_to_url), 1 / len(idx_to_url))
@@ -18,7 +18,7 @@ class PageRank:
         # Iterate until convergence
         for i in range(max_iterations):
             old_state = state
-            state = np.matmul(old_state, M)
+            state = np.matmul(old_state, matrix)
 
             # Check if state has reached a stationary position
             if np.allclose(state, old_state):

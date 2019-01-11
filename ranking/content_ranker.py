@@ -31,13 +31,19 @@ class ContentRanker:
 
     def _rank_cosine_score(self):
         indexer = self._query.get_indexer()
+        search_terms = set(self._query.get_search_terms())
 
-        # Find the set of relevant documents by disjunction
-        relevant = self._query.get_matches()
+        # Find a subset of documents from our champion list
+        relevant = set()
+        for term in search_terms:
+            if term in indexer.term_dict:
+                relevant = relevant.union(indexer.term_dict.champion_list[term])
+
+        # Initialize score for each relevant document
         scores = {doc: 0 for doc in relevant}
 
         # Disregards the frequency of terms in queries and assumes they only occur once
-        for term in set(self._query.get_search_terms()):
+        for term in search_terms:
             for doc in relevant:
                 scores[doc] += indexer.term_dict.get_tf_idf(term, doc)
 
