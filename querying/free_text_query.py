@@ -16,5 +16,11 @@ class FreeTextQuery:
 
         return matches
 
+    def get_indexer(self):
+        return self._indexer
+
+    def get_search_terms(self):
+        return self._tokens
+
     def get_matches(self):
         return self._matches

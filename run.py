@@ -4,6 +4,7 @@ from threading import Thread
 
 from indexing.indexer import Indexer
 from querying.free_text_query import FreeTextQuery
+from ranking.content_ranker import ContentRanker
 from ranking.pagerank import PageRank
 from webcrawling.crawler import Crawler
 
@@ -41,9 +42,11 @@ if __name__ == "__main__":
 
         query = FreeTextQuery(indexer, "anders langballe jakobsen")
 
-        for id in query.get_matches():
-            print(indexer.url_vocabulary.get(id))
+        print('Content ranking...')
+        ranker = ContentRanker(query)
+        for doc, score in ranker.top(10):
+            print(f'{score}: {indexer.url_vocabulary.get(doc)}')
 
-        print("ranking...")
+        print("Page ranking...")
         print(PageRank(crawler).rank()[:20])
         time.sleep(5)
