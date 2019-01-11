@@ -2,12 +2,12 @@ import numpy as np
 
 
 class PageRank:
-    def __init__(self, crawler):
-        self.crawler = crawler
+    def __init__(self, url_references):
+        self.url_references = url_references
 
     def rank(self, alpha=0.15, max_iterations=1000):
         # Ensure that we have some URLs with references
-        if not self.crawler.url_references:
+        if not self.url_references:
             return []
 
         M, idx_to_url = self.construct_matrix(alpha=alpha)
@@ -22,7 +22,7 @@ class PageRank:
 
             # Check if state has reached a stationary position
             if np.allclose(state, old_state):
-                print(f'Finished at iteration {i}')
+                print(f'PageRank converged at iteration {i}')
 
                 break
 
@@ -34,8 +34,7 @@ class PageRank:
     """ Constructs the transition probability matrix """
     def construct_matrix(self, alpha):
         # Get URLs that have been seen (not necessarily visited)
-        all_references = self.crawler.url_references
-        urls = all_references.keys()  # self.crawler.seen_urls
+        urls = self.url_references.keys()  # self.crawler.seen_urls
 
         # Maintain a mapping from URLs to their index
         url_to_idx = dict()
@@ -48,12 +47,12 @@ class PageRank:
         # For each URL, determine the possibility of transitioning and update the matrix
         for url in urls:
             # Ignore URLs which we do not have references for
-            if url not in all_references:
+            if url not in self.url_references:
                 continue
 
             # Get the references for this URL
             # Intersection used to get only references to URLs that we have visited
-            references = all_references[url].intersection(urls)
+            references = self.url_references[url].intersection(urls)
 
             # Row-wise construction depends on whether the page is dangling
             if not references:
@@ -77,7 +76,3 @@ class PageRank:
 
         # P_PageRank = (1 - alpha) * P + alpha * U
         return (1 - alpha) * matrix + alpha * tp_matrix, idx_to_url
-
-
-if __name__ == "__main__":
-    PageRank(None).rank()

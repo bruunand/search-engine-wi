@@ -4,6 +4,13 @@ Multi-threaded webcrawler made as a part of the Web Intelligence course at AAU. 
 Group participants:
 * Anders Langballe Jakobsen
 
+## Pre-processing
+- Even after stemming and removing stopwords, I obviously still get a lot of gibberish terms
+- Example pairs: `('�W�', 97), ('�W�', 97), ('�W�', 97), ('�W�', 125), ('�W�', 125)`
+- Further investigation revealed that these were sourced from PDF files
+  - Obviously, these need special treatment
+- It's difficult to filter these our (are they syntactically valid in some language?)
+- I've iteratively removed symbols like `@` and `#`. Probably a good idea to find a comprehensive list instead
 ## Postings list data structure
 - Postings lists are stored as Python dictionaries
   - Allows us to store the frequency of the term for each document the term appears in
@@ -29,3 +36,8 @@ Group participants:
 hashing function good for super shingles, I use the same hashing function base for both 
 - Python's hashing functions are re-generated on each run (for security purposes), so in practice I would need a hashing
 algorithm which is consistent across runs
+
+## Front queue prioritization
+- I have not implemented prioritization in front queues. It uses a random system which is really no better than having
+one large queue
+- Why not? Didn't want to write a heuristic for "important" websites

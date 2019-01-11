@@ -1,9 +1,5 @@
-def get_shingles(document, n=4):
-    """ Generates n-shingles (n-grams) given a document """
-
-    # The split function splits on whitespace
-    split_document = document.split()
-
+def get_shingles(split_document, n=4):
+    """ Generates n-shingles (n-grams) given a split document """
     # Shingles are easily made using list comprehension
     # Lists are not hashable so tuples are returned instead
     shingles = [tuple(split_document[i:i+n]) for i in range(len(split_document) - n + 1)]
@@ -23,4 +19,4 @@ def get_supershingles(sketch, hashing_function=hash, k=6):
 
 
 if __name__ == "__main__":
-    print(get_shingles('This is a test of how shingles work', 4))
+    print(get_shingles('This is a test of how shingles work'.split(), 4))

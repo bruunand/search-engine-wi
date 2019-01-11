@@ -3,12 +3,12 @@ import random
 import threading
 import time
 from logging import getLogger
-from multiprocessing.sharedctypes import synchronized
 from queue import Queue, Empty
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
-from tld import get_tld
+
 import requests
 from bs4 import BeautifulSoup
+from tld import get_tld
 
 from webcrawling.back_heap import BackHeap
 from webcrawling.parser.robots_parser import RobotsParser
@@ -69,7 +69,6 @@ class Crawler:
             else:
                 self.seen_urls.add(url)
 
-        # If host is unseen, assign it to a back queue
         parsed_url = urlparse(url)
         host = parsed_url.netloc
 
@@ -79,16 +78,16 @@ class Crawler:
 
         # For initial hosts, create a back queue and heap entry for them
         with self.lock:
-            if len(self.back_queues) < self.num_back_queues and host not in self.back_heap:
+            if len(self.back_queues) < self.num_back_queues and host not in self.back_heap.history:
                 queue = Queue()
 
                 # Our seeds get "special treatment" by instantly being put in a back queue
                 queue.put(url)
                 self.host_queue_map[host] = queue
                 self.back_queues.add(queue)
-                self.back_heap.push_host(host, delay=False)
-
-        self.add_to_frontier(url)
+                self.back_heap.push_host(host, delay=True)
+            else:
+                self.add_to_frontier(url)
 
     def get_hyperlinks(self, soup, referer):
         hyperlinks = set()
@@ -173,8 +172,8 @@ class Crawler:
             for tag in soup(["script", "style"]):
                 tag.extract()
 
-            # Add to set of un-indexed pages
-            self.unindexed.put((url, soup.text))
+            # Add to dictionary of URL contents
+            self.url_contents[url] = soup.text
         except Exception as e:
             getLogger().error(f'Worker exception: {e}')
             return False
@@ -222,25 +221,31 @@ class Crawler:
                         existing = self.host_queue_map.get(new_host)
 
                         if existing:
+                            # The URL selected from a front queue already has a queue
                             existing.put(url)
                         else:
-                            # Update the current back queue to support the new URL
+                            # The current back queue is transferred to the new host
                             host = new_host
                             self.host_queue_map[host] = back_queue
                             back_queue.put(url)
 
                 # Add entry to heap
                 self.back_heap.push_host(host, delay=True)
-        for i in range(self.threads):
+
+        # Start the designated number of threads
+        for _ in range(self.threads):
             thread = threading.Thread(target=_crawl)
             thread.start()
 
     def stop_crawlers(self):
         self.crawling = False
 
-    def __init__(self, threads=3, num_front_queues=1):
+    def __init__(self, threads=40, num_front_queues=1):
         self.crawling = False
         self.threads = threads
+
+        # Maintains a dictionary from URLs to their contents
+        self.url_contents = dict()
 
         # Maintain a dictionary from URLs to their referenced URLs
         self.url_references = dict()
@@ -260,9 +265,6 @@ class Crawler:
         # Maintain a set of seen URLs to avoid redundant crawling
         self.seen_urls = set()
 
-        # Maintains a queue of un-indexed text
-        self.unindexed = Queue()
-
         # Maintain a mapping of prioritised front queues
         self.num_front_queues = num_front_queues
         self.front_queues = dict()
@@ -275,12 +277,3 @@ class Crawler:
         # Maintain a set of back queues
         self.back_queues = set()
         self.num_back_queues = threads * 3
-
-
-'''
-Cut corners:
-- I have not implemented prioritization in front queues. It uses a random system which is really no better than having
-one large queue.
-- I do not differentiate between www.[host] and [host]. In practice they can result in different IP addresses and
-different robot files, so perhaps it's not really an issue.
-'''

@@ -37,8 +37,8 @@ def jaccard_similarity(a, b):
 def demonstrate():
     hash_functions = generate_hash_functions(84)
 
-    example_a = get_shingles('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.', 4)
-    example_b = get_shingles('Lorem dolor sit amet, consectetur adipiscing elit, sed do tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.', 4)
+    example_a = get_shingles('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'.split(), 4)
+    example_b = get_shingles('Lorem dolor sit amet, consectetur adipiscing elit, sed do tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'.split(), 4)
 
     min_a = get_min_hashes(hash_functions, example_a)
     min_b = get_min_hashes(hash_functions, example_b)
