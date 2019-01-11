@@ -34,12 +34,12 @@ class ContentRanker:
         scores = {doc: 0 for doc in indexer.document_ids}
 
         # Disregards the frequency of terms in queries and assumes they only occur once
-        for term in self._query.get_search_terms():
+        for term in set(self._query.get_search_terms()):
             for doc in indexer.document_ids:
                 scores[doc] += indexer.term_dict.get_tf_idf(term, doc)
 
         # Normalize scores wrt doc lengths
-        # We are not normalizing wrt query lengths because it is a constant
+        # We are not normalizing wrt query lengths because it is a constant, i.e. would not change ordering
         scores = {doc: scores[doc] / indexer.term_dict.get_document_length(doc) for doc in indexer.document_ids}
 
         return _sort_scores(scores)
