@@ -1,15 +1,18 @@
-import functools
-
-from stemming.porter2 import stem
-from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from stemming.porter2 import stem
 
-_disallowed_tokens = {'!', '@', '#', '?', ',', '.', '(', ')', '/', '<', '>'}.union(set(stopwords.words('english')))
+_disallowed_tokens = {'!', '@', '#', '?', ',', '.', '(', ')', '/', '<', '>', '_', '-'}.union(set(stopwords.words('english')))
+
+
+def get_disallowed_tokens():
+    return _disallowed_tokens
 
 
 def doc_preprocess(text):
     """ Document-wide pre-processing, i.e. not on individual terms """
-    return text.lower()
+    # Document is lower-cased and all apostrophes are replaced
+    return text.lower().replace('\'', '')
 
 
 def tokenize(text, remove_stopwords=True, stem_tokens=True):

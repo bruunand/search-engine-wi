@@ -1,6 +1,7 @@
 import pickle
 
 from indexing.indexer import Indexer
+from querying.boolean.boolean_query import BooleanQuery
 from querying.free_text_query import FreeTextQuery
 from ranking.content_ranker import ContentRanker
 from ranking.pagerank import PageRank
@@ -28,16 +29,23 @@ if __name__ == "__main__":
     logger.info('Updating champion list')
     indexer.term_dict.update_champions(r=20)
 
-    # Iteratively accept user input
-    while True:
-        query_string = input('Enter free text query:')
-
-        # Construct query
+    def free_text_mode(query_string):
         query = FreeTextQuery(indexer, query_string)
 
         # Rank with cosine score
         content_ranker = ContentRanker(query)
 
         # Print results
-        for index, document in enumerate(content_ranker.top(10)):
-            print(f'{index + 1}. {document[0]}')
+        for idx, document in enumerate(content_ranker.top(10)):
+            print(f'{idx + 1}. {document[0]}')
+
+    def boolean_query_mode(query_string):
+        query = BooleanQuery(indexer, query_string)
+
+        matches = query.get_matches()
+        print(f'{len(matches)} matches')
+        print(matches)
+
+    # Repeatedly accept user input
+    while True:
+        boolean_query_mode(input('Enter query:'))

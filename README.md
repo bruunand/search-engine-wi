@@ -4,6 +4,37 @@ Multi-threaded webcrawler made as a part of the Web Intelligence course at AAU. 
 Group participants:
 * Anders Langballe Jakobsen
 
+# Boolean query
+## Examples
+* Casing is ignored
+
+
+    Enter query:USA
+    110 matches
+    Enter query:usa
+    110 matches
+* Stemming means that different words with different meanings produce the same results
+
+
+    Enter query:democratic
+    25 matches
+    Enter query:democratization
+    25 matches
+
+* Apostrophes are removed from terms
+
+
+    Enter query:can't
+    38 matches
+    Enter query:cant
+    38 matches
+
+## Cut corners
+- In order to optimise boolean queries, we can sequentially process ANDs in order of increasing document frequency for each term
+- I have cut a corner here by not processing the terms in that sequence
+
+
+# Overall thoughts
 ## Pre-processing
 - Even after stemming and removing stopwords, I obviously still get a lot of gibberish terms
 - Example pairs: `('�W�', 97), ('�W�', 97), ('�W�', 97), ('�W�', 125), ('�W�', 125)`
@@ -11,18 +42,11 @@ Group participants:
   - Obviously, these need special treatment
 - It's difficult to filter these our (are they syntactically valid in some language?)
 - I've iteratively removed symbols like `@` and `#`. Probably a good idea to find a comprehensive list instead
+
 ## Postings list data structure
 - Postings lists are stored as Python dictionaries
   - Allows us to store the frequency of the term for each document the term appears in
 - Time complexity of intersection and union is `O(n+m)` in the average case
-
-## Boolean query processing
-- In order to optimise boolean queries, we can sequentially process ANDs in order of increasing document frequency for each term
-- I have cut a corner here by not processing the terms in that sequence
- 
-## Individual document indexing
-- Whenever I perform an index, I only index one document at once
-- This means I don't do the core step of sorting (Term, Document ID) pairs
 
 ## PageRank
 - Initialize, I saved references from hosts to themselves

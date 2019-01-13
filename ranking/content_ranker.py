@@ -45,11 +45,11 @@ class ContentRanker:
         # Disregards the frequency of terms in queries and assumes they only occur once
         for term in search_terms:
             for doc in relevant:
+                # No need to do a dot product here, since each query term has an equal weight
                 scores[doc] += indexer.term_dict.get_tf_idf(term, doc)
 
         # Normalize scores wrt doc lengths
         # We are not normalizing wrt query lengths because it is a constant, i.e. would not change ordering
-        # Thus, we are assuming no weighting no query term and that each query term occurs once
         url = indexer.url_vocabulary.get
         scores = [(url(doc), scores[doc] / indexer.term_dict.get_document_length(doc)) for doc in relevant]
 

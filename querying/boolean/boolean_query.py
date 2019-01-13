@@ -28,7 +28,7 @@ class BooleanQuery:
             current_term = self._parse_term()
             if negate:
                 # Take complement of term
-                current_term = self._indexer.document_ids.difference(current_term)
+                current_term = self._indexer.url_vocabulary.get_document_ids().difference(current_term)
 
             # Parse from left to right as long as next token is an operand
             while self._tokenizer.is_next_operand():
@@ -53,7 +53,7 @@ class BooleanQuery:
         if token_type == TokenType.STRING:
             term = self._tokenizer.next().lower()
 
-            return self._indexer.term_dict.get_documents_with_term(term) if self._indexer.term_dict.has(term) else set()
+            return self._indexer.term_dict.get_documents_with_term(term) if term in self._indexer.term_dict else set()
         elif token_type == TokenType.L_PAREN:
             # Proceed to next token
             self._tokenizer.next()

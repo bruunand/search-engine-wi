@@ -1,8 +1,9 @@
 import enum
 import re
+
 from stemming.porter2 import stem
 
-from shared.tokenizer import get_disallowed_words
+from shared.tokenizer import get_disallowed_tokens, doc_preprocess
 
 TokenizerRegex = re.compile(r'(\bAND\b|\bOR\b|NOT|\(|\))')
 
@@ -19,6 +20,7 @@ class TokenType(enum.Enum):
 
 class BooleanQueryTokenizer:
     def __init__(self, query):
+        query = doc_preprocess(query)
         self.index = 0
         self.tokens = [token.strip() for token in TokenizerRegex.split(query) if token.strip() != '']
         self._search_terms = set()
@@ -40,7 +42,7 @@ class BooleanQueryTokenizer:
                 self.tokens[idx] = stem(self.tokens[idx])
 
                 # Remove if disallowed word
-                if self.tokens[idx] in get_disallowed_words():
+                if self.tokens[idx] in get_disallowed_tokens():
                     del self.tokens[idx]
 
                     continue
