@@ -48,4 +48,4 @@ if __name__ == "__main__":
 
     # Repeatedly accept user input
     while True:
-        boolean_query_mode(input('Enter query:'))
+        free_text_mode(input('Enter query:'))

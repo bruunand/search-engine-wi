@@ -61,17 +61,26 @@ class TermDictionary:
     def set_document_lengths(self, document_length_docs):
         self._url_length_dict = document_length_docs
 
-    """ Calculate the length of a document. """
+    """ Compute the length of a document. """
     def get_document_length(self, document):
         # I originally iterated over the term postings dict and summed
         # That approach was simply too slow
         return self._url_length_dict[document]
 
-    """ Calculates term frequency–inverse document frequency. """
+    """ Compute term frequency–inverse document frequency.
+        Product of its tf weight and its idf weight.
+        Increases with number of occurrences within a document.
+        Increase with rarity of the term in the collection.
+    """
     def get_tf_idf(self, term, document):
-        return self.get_tf(term, document) * self.get_idf(term)
+        tf = self.get_tf(term, document)
 
-    """ Calculate inverse document frequency. Logging is used to dampen its effect. """
+        return tf + self.get_idf(term) if tf else 0
+
+    """ Compute inverse document frequency.
+        Logging is used to dampen its effect. 
+        Intuitively, rare words will have a higher idf.
+    """
     def get_idf(self, term):
         return math.log10(len(self._url_vocabulary.get_document_ids()) / self.get_df(term))
 
@@ -79,15 +88,15 @@ class TermDictionary:
     def get_df(self, term):
         return len(self.get_documents_with_term(term))
 
-    """ Calculate log frequency weighting.
+    """ Compute log frequency weighting.
         Importance does not increase proportionally with frequency, so we use logging to damper the effect.
     """
     def get_frequency_log_weighting(self, word, document):
-        frequency = self.get_tf(word, document)
+        tf = self.get_tf(word, document)
 
-        return 0 if not frequency else 1 + math.log10(frequency)
+        return 1 + math.log10(tf) if tf else 0
 
-    """ Calculate term frequency for some term in some document. """
+    """ Compute term frequency for some term in some document. """
     def get_tf(self, term, document):
         if term not in self:
             return 0
