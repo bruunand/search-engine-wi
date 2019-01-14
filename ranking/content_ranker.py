@@ -3,7 +3,7 @@ def _sort_scores(document_scores):
 
 
 class ContentRanker:
-    def __init__(self, query, auxiliary_scores):
+    def __init__(self, query, auxiliary_scores=None):
         self._query = query
         self._auxiliary_scores = auxiliary_scores
         self._rank_list = self._rank_cosine_score()

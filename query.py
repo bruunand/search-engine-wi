@@ -19,6 +19,9 @@ if __name__ == "__main__":
     indexer = Indexer()
     indexer.index_corpus(url_contents_dict)
 
+    # Save the indexer for fast access
+    pickle.dump(indexer, open('indexer.pkl', 'wb'))
+
     # PageRank the URL references
     logger.info('Performing PageRank')
     page_rank = PageRank(url_references)
