@@ -8,6 +8,7 @@ from urllib.parse import urlparse, urljoin, unquote, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
+from loguru import logger
 from tld import get_tld
 
 from webcrawling.back_heap import BackHeap
@@ -26,7 +27,7 @@ def log_on_failure(func):
 
 
 class Crawler:
-    UserAgent = 'Kekbot'
+    UserAgent = 'Wibot'
     BaseHeaders = {'User-Agent': UserAgent}
 
     def normalize_url(self, url, referer=None):
@@ -40,6 +41,13 @@ class Crawler:
 
         # Decode percent-encoded octets of unreserved characters
         url = unquote(url)
+
+        # Remove anchor scrolling
+        if '#' in url:
+            url = url.split('#')[0]
+
+        # Remove trailing slash if any
+        url = url.rstrip('/')
 
         return url
 
@@ -90,8 +98,8 @@ class Crawler:
                 self.add_to_frontier(url)
 
     def get_hyperlinks(self, soup, referer):
-        hyperlinks = set()
-        illegal_starts = {'mailto:', 'javascript:', '#'}
+        hyperlinks = dict()
+        illegal_starts = {'mailto:', 'javascript:', '#', 'tel:'}
 
         for tag in soup.find_all('a', href=True):
             href = tag['href']
@@ -100,7 +108,7 @@ class Crawler:
                 if href.startswith(start):
                     break
             else:
-                hyperlinks.add(self.normalize_url(href, referer))
+                hyperlinks[self.normalize_url(href, referer)] = tag.text
 
         return hyperlinks
 
@@ -118,7 +126,7 @@ class Crawler:
         return self.host_robots[host]
 
     def request_url(self, url):
-        response = requests.get(url, headers=Crawler.BaseHeaders, timeout=30)
+        response = requests.get(url, headers=Crawler.BaseHeaders, timeout=5)
 
         # If we were redirected, we can also say that this URL has been crawled
         self.seen_urls.add(response.url)
@@ -128,7 +136,19 @@ class Crawler:
 
             return None, response.url
         else:
+            # Check if content is text/html
+            content_type = response.headers.get('Content-Type', None)
+            if not content_type or 'text' not in content_type:
+                return None, response.url
+
             return response.text, response.url
+
+    def add_contents(self, url, contents):
+        contents = contents.strip()
+        if not contents:
+            return
+
+        self.url_contents[url] = f'{contents} {self.url_contents.get(url, "")}'.strip()
 
     def fetch_url(self, url):
         """ Fetches a URL, performs parsing of it, passes to indexer and saves outgoing links """
@@ -152,28 +172,29 @@ class Crawler:
             # Get hyperlink from contents
             hyperlinks = self.get_hyperlinks(soup, url)
 
-            # Add hyperlinks to queue
-            for hyperlink in hyperlinks:
-                self.queue_raw_url(hyperlink)
-
             # Set outgoing links for current URL
+            # Update contents of referenced URLs to include anchor text
             references = set()
-            referencing_tld = get_tld(url, fail_silently=True)
-            for hyperlink in hyperlinks:
-                referenced_tld = get_tld(hyperlink, fail_silently=True)
+            for hyperlink, anchor_text in hyperlinks.items():
+                if hyperlink in self.url_contents:
+                    self.add_contents(hyperlink, anchor_text)
 
-                if referenced_tld != referencing_tld:
+                if hyperlink != url:
                     references.add(hyperlink)
 
             # Only add references that are not referenced by the same host
             self.url_references[url] = references
+
+            # Add hyperlinks to URL frontier
+            for hyperlink in hyperlinks:
+                self.queue_raw_url(hyperlink)
 
             # Remove irrelevant tags
             for tag in soup(["script", "style"]):
                 tag.extract()
 
             # Add to dictionary of URL contents
-            self.url_contents[url] = soup.text
+            self.add_contents(url, soup.text)
         except Exception as e:
             getLogger().error(f'Worker exception: {e}')
             return False
@@ -240,7 +261,7 @@ class Crawler:
     def stop_crawlers(self):
         self.crawling = False
 
-    def __init__(self, threads=40, num_front_queues=1):
+    def __init__(self, threads=100, num_front_queues=1):
         self.crawling = False
         self.threads = threads
 

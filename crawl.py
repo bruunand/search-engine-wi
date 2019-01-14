@@ -10,10 +10,13 @@ if __name__ == "__main__":
     crawler = Crawler()
 
     # Add seed URLs
-    crawler.queue_raw_url('http://aau.dk')
     crawler.queue_raw_url('https://www.cs.aau.dk/')
     crawler.queue_raw_url('http://anderslangballe.dk')
-    crawler.queue_raw_url('http://tv2.dk')
+    crawler.queue_raw_url('https://www.reddit.com/r/technology')
+    crawler.queue_raw_url('https://www.reddit.com/r/programming')
+    crawler.queue_raw_url('https://www.reddit.com/r/machinelearning')
+    crawler.queue_raw_url('https://www.reddit.com/r/worldnews')
+    crawler.queue_raw_url('https://www.reddit.com/r/news')
 
     # Start logger thread
     def log():
@@ -25,7 +28,7 @@ if __name__ == "__main__":
             time.sleep(5)
 
             # If a certain content length has been reached, terminate
-            if len(crawler.url_contents) > 3000:
+            if len(crawler.url_contents) > 20000:
                 logger.info('Dumping contents and references...')
                 dump(crawler.url_contents, open('contents.p', 'wb'))
                 dump(crawler.url_references, open('references.p', 'wb'))

@@ -1,23 +1,28 @@
 import pickle
 
-from duplicates.minhash import generate_hash_functions, get_min_hashes
+from duplicates.minhash import generate_hash_functions, get_min_hashes, jaccard_similarity
 from duplicates.shingles import get_shingles, get_supershingles
 
-min_overlap = 7  # At least 7 supershingles must overlap
+min_overlap = 2  # At least 7 supershingles must overlap
+min_similarity = 0.5
 url_supershingles = dict()
+url_sketch = dict()
 
 
-def add_supershingles(url, supershingles):
+def add_supershingles(to_url, supershingles):
     for e_url, e_supershingles in url_supershingles.items():
         intersecting = supershingles.intersection(e_supershingles)
 
         overlap = len(intersecting)
         if overlap >= min_overlap:
-            print(f'Overlap of {overlap} between existing {e_url} and {url}')
+            # Supershingles are overlapping, now compare overlap in sketches
+            similarity = jaccard_similarity(url_sketch[e_url], url_sketch[to_url])
+            if similarity >= min_similarity:
+                print(f'Similarity of {similarity * 100}% between {e_url} and {to_url}')
 
-            return
+                return
 
-    url_supershingles[url] = supershingles
+    url_supershingles[to_url] = supershingles
 
 
 if __name__ == "__main__":
@@ -36,5 +41,6 @@ if __name__ == "__main__":
 
         shingles = get_shingles(split_contents)
         min_hashes = get_min_hashes(hash_functions, shingles)
+        url_sketch[url] = min_hashes
 
         add_supershingles(url, set(get_supershingles(min_hashes)))
