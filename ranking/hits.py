@@ -40,14 +40,24 @@ class HITS:
         a = np.full(len(base_set), 1)
         h = np.full(len(base_set), 1)
 
+        # Keep old values to check for convergence
+        a_prev = np.zeros(len(base_set))
+        h_prev = np.zeros(len(base_set))
+
         for i in range(iterations):
+            if np.allclose(a, a_prev) and np.allclose(h, h_prev):
+                break
+            else:
+                a_prev = a
+                h_prev = h
+
             # Update authority scores
             # The authority score of a page is the sum of hub scores of pages pointing to it
             for current_url in base_set:
                 sum_score = 0
 
                 # Find all URLs referencing this URL
-                for referencing, links in self._url_references:
+                for referencing, links in self._url_references.items():
                     if referencing not in base_set:
                         continue
 
@@ -55,6 +65,8 @@ class HITS:
                         if outgoing == current_url:
                             # URL points at current URL
                             sum_score += h[url_to_idx[referencing]]
+
+                a[url_to_idx[current_url]] = sum_score
 
             # Update hub scores
             # The hub score of a page is the sum of authority scores of pages it points to
@@ -67,6 +79,8 @@ class HITS:
                 for referenced in self._url_references[current_url]:
                     if referenced in base_set:
                         sum_score += a[url_to_idx[referenced]]
+
+                h[url_to_idx[current_url]] = sum_score
 
             # Normalize scores
             a = normalize(a)

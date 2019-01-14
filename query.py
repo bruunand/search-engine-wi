@@ -4,6 +4,7 @@ from indexing.indexer import Indexer
 from querying.boolean.boolean_query import BooleanQuery
 from querying.free_text_query import FreeTextQuery
 from ranking.content_ranker import ContentRanker
+from ranking.hits import HITS
 from ranking.pagerank import PageRank
 from loguru import logger
 
@@ -16,11 +17,21 @@ if __name__ == "__main__":
 
     # Perform indexing on the corpus
     logger.info(f'Indexing {len(url_contents_dict)} documents')
-    indexer = Indexer()
-    indexer.index_corpus(url_contents_dict)
+    #indexer = Indexer()
+    #indexer.index_corpus(url_contents_dict)
+    indexer = pickle.load(open('indexer.pkl', 'rb'))
 
     # Save the indexer for fast access
-    pickle.dump(indexer, open('indexer.pkl', 'wb'))
+    #pickle.dump(indexer, open('indexer.pkl', 'wb'))
+
+    # Compute champion list
+    logger.info('Updating champion list')
+    indexer.term_dict.update_champions(r=50)
+
+    # HITS
+    logger.info('Performing HITS')
+    h = HITS(FreeTextQuery(indexer, 'anders'), url_references)
+    h.rank()
 
     # PageRank the URL references
     logger.info('Performing PageRank')
@@ -28,10 +39,6 @@ if __name__ == "__main__":
     rank_result = page_rank.rank()
     for index, url in enumerate(rank_result[:10]):
         print(f'{index + 1}. {url[0]}')
-
-    # Compute champion list
-    logger.info('Updating champion list')
-    indexer.term_dict.update_champions(r=20)
 
     # Make dictionary from URL to PageRank score (for combined score)
     url_pagerank = {tup[0]: tup[1] for tup in rank_result}

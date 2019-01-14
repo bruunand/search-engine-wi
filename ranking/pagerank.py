@@ -16,10 +16,8 @@ class PageRank:
         # Construct the transition probability matrix
         matrix, idx_to_url = self.construct_matrix(alpha=alpha)
 
-        # In initial state, surfer starts at a random page
-        state = np.zeros(len(idx_to_url))
-        state[randint(0, len(idx_to_url) - 1)] = 1
-        # state = np.full(len(idx_to_url), 1 / len(idx_to_url))
+        # In initial state, equally probable to visit any other link
+        state = np.full(len(idx_to_url), 1 / len(idx_to_url))
 
         # Iterate until convergence
         for i in range(max_iterations):

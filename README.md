@@ -4,21 +4,48 @@ Multi-threaded webcrawler made as a part of the Web Intelligence course at AAU. 
 Group participants:
 * Anders Langballe Jakobsen
 
-# Content ranking (cosine similarity)
+# Ranking (cosine similarity)
 ## Examples
-* Querying for AAU results in
+* Querying for `neural networks` with just cosine ranking results in
 
-        1. https://www.en.aau.dk/contact
-        2. https://www.en.aau.dk/about-aau/organisation-management
-        3. https://www.en.aau.dk/about-aau/figures-facts
-        4. https://www.en.aau.dk/about-aau/international-cooperation
-        5. https://www.en.aau.dk/education/study-in-scandinavia
-        6. https://www.en.aau.dk/about-aau
-        7. https://www.en.aau.dk/
-* These are all relatively short documents that contain AAU, so intuitively they have a closer similarity to the query.
-However, one might expect that the 7th ranked URL (aau.dk) is ranked highest, which shows the problem with pure content
-ranking
+        1. https://www.news.aau.dk/news/artificial-neural-networks-make-life-easier-for-hearing-aid-users.cid385105
+        2. https://www.en.tech.aau.dk/
+        3. https://www.news.aau.dk/news/robots-in-sewers-will-save-society-millions.cid381247
+        4. https://www.vacancies.aau.dk/show-vacancy/?vacancy=1020540
+        5. https://www.eciu.org/events
+        6. http://www.ciss.dk/research/
+        7. https://www.tech.aau.dk/
+        8. https://www.en.inside.aau.dk/
+        9. https://www.en.aub.aau.dk/
+        10. https://www.news.aau.dk/?page=1
+* All of these documents contain neural networks. In this case anchor text is actually included, so that might affect
+why we see an article containing `neural networks`in its URL
+* When we include PageRank, the order changes a bit. Intuitively, it makes sense that more general URLs achieve a higher
+PageRank, while e.g. the article about neural networks is relatively new and probably has fewer references
 
+        1. https://vbn.aau.dk/da/publications/search.html
+        2. https://developer.microsoft.com/en-us/windows
+        3. https://www.eciu.org/news
+        4. https://www.eciu.org/events
+        5. https://plus.google.com/discover
+        6. https://www.news.aau.dk/news/artificial-neural-networks-make-life-easier-for-hearing-aid-users.cid385105
+        7. https://www.news.aau.dk/news/video--student-recreates-the-sound-of-the-sixties-with-software.cid383758
+        8. https://www.news.aau.dk/news/sgre-and-aau-to-lead-project-making-offshore-wind-more-affordable.cid384779
+        9. https://www.news.aau.dk/news/new-aau-professor-to-harness-massive-information.cid382261
+        10. https://www.business.aau.dk/research
+* If we consider PageRank alone, we get many results that are linked on pretty much every part of AAU's website. This of
+course makes sense, since `cs.aau.dk` is used as the initial seed
+
+        1. https://blog.flickr.net/en
+        2. https://blog.flickr.net/category/photographer-spotlight
+        3. https://blog.flickr.net/category/flickrfriday
+        4. https://www.aau.dk/om-cookies
+        5. https://www.flickr.com/photos/aalborguniversity
+        6. https://www.snapchat.com/add/aauuni
+        7. https://www.aau.dk/pressen
+        8. https://www.aau.dk/arrangementer
+        9. https://www.aau.dk/kontakt
+        10. https://www.aau.dk/om-aau/organisation/campus
 ## Cut corners
 - I compute the vector length for each document at indexing time in order to save time during query time. I don't know
 whether this is a standard practice, but computing the vector length at query time was simply to expensive. This is one
