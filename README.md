@@ -57,26 +57,25 @@ it
 * Casing is ignored
 
 
-    Enter query:USA
-    110 matches
-    Enter query:usa
-    110 matches
+            Enter query:USA
+            110 matches
+            Enter query:usa
+            110 matches
 * Stemming means that different words with different meanings produce the same results
 
 
-    Enter query:democratic
-    25 matches
-    Enter query:democratization
-    25 matches
+            Enter query:democratic
+            25 matches
+            Enter query:democratization
+            25 matches
 
 * Apostrophes are removed from terms
 
 
-    Enter query:can't
-    38 matches
-    Enter query:cant
-    38 matches
-
+            Enter query:can't
+            38 matches
+            Enter query:cant
+            38 matches
 ## Cut corners
 - In order to optimise boolean queries, we can sequentially process ANDs in order of increasing document frequency for each term
 - I have cut a corner here by not processing the terms in that sequence
