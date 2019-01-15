@@ -56,26 +56,23 @@ it
 ## Examples
 * Casing is ignored
 
-
-            Enter query:USA
-            110 matches
-            Enter query:usa
-            110 matches
+        Enter query:USA
+        110 matches
+        Enter query:usa
+        110 matches
 * Stemming means that different words with different meanings produce the same results
 
-
-            Enter query:democratic
-            25 matches
-            Enter query:democratization
-            25 matches
+        Enter query:democratic
+        25 matches
+        Enter query:democratization
+        25 matches
 
 * Apostrophes are removed from terms
 
-
-            Enter query:can't
-            38 matches
-            Enter query:cant
-            38 matches
+        Enter query:can't
+        38 matches
+        Enter query:cant
+        38 matches
 ## Cut corners
 - In order to optimise boolean queries, we can sequentially process ANDs in order of increasing document frequency for each term
 - I have cut a corner here by not processing the terms in that sequence
@@ -90,22 +87,18 @@ algorithm which is consistent across runs
 ## Examples
 - Some have anchor hashtags (these have since been normalized, since it only affects the browser)
 
-
-    Similarity of 100.0% between https://www.eciu.org/ and https://www.eciu.org/#mission
+        Similarity of 100.0% between https://www.eciu.org/ and https://www.eciu.org/#mission
 - Some of the detected duplicates are obvious ones (e.g. HTTPS vs HTTP)
 
-
-    Similarity of 100.0% between http://kundeservice.tv2.dk/ and https://kundeservice.tv2.dk/
-    Similarity of 89.28571428571429% between https://apnews.com/ and https://www.apnews.com/
+        Similarity of 100.0% between http://kundeservice.tv2.dk/ and https://kundeservice.tv2.dk/
+        Similarity of 89.28571428571429% between https://apnews.com/ and https://www.apnews.com/
 - Some are less obvious (different TLDs)
 
-
-    Similarity of 100.0% between http://www.youronlinechoices.eu/ and http://www.youronlinechoices.com/
+        Similarity of 100.0% between http://www.youronlinechoices.eu/ and http://www.youronlinechoices.com/
 - Some are false positives. In this case, they share a lot of the same website structure and are relatively small
 documents
 
-
-    Similarity of 66.3157894736842% between https://www.search.aau.dk/?locale=da and https://www.its.aau.dk/vejledninger/nyadgangskode/linux/
+        Similarity of 66.3157894736842% between https://www.search.aau.dk/?locale=da and https://www.its.aau.dk/vejledninger/nyadgangskode/linux/
 # Overall thoughts
 ## Pre-processing
 - Even after stemming and removing stopwords, I obviously still get a lot of gibberish terms
