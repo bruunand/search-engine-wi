@@ -3,8 +3,8 @@ import pickle
 from duplicates.minhash import generate_hash_functions, get_min_hashes, jaccard_similarity
 from duplicates.shingles import get_shingles, get_supershingles
 
-min_overlap = 2  # At least 7 supershingles must overlap
-min_similarity = 0.5
+min_overlap = 2  # Minimum supershingle overlap
+min_similarity = 0.5  # Minimum fractional sketch overlap
 url_supershingles = dict()
 url_sketch = dict()
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     hash_functions = generate_hash_functions(84)
 
     # Load corpus from file
-    url_contents_dict = pickle.load(open('contents.p', 'rb'))
+    url_contents_dict = pickle.load(open('contents.pkl', 'rb'))
 
     # For each URL, compute its supershingles
     for url, contents in url_contents_dict.items():

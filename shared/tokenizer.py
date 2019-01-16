@@ -1,6 +1,6 @@
+from nltk import PorterStemmer
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from stemming.porter2 import stem
 
 _disallowed_tokens = {'!', '@', '#', '?', ',', '.', '(', ')', '/', '<', '>', '_', '-'}.union(set(stopwords.words('english')))
 
@@ -30,7 +30,8 @@ def tokenize(text, remove_stopwords=True, stem_tokens=True):
         tokenized = [token for token in tokenized if token not in _disallowed_tokens]
 
     # Stem tokens if requested
-    if stem:
-        tokenized = [stem(token) for token in tokenized]
+    if stem_tokens:
+        stemmer = PorterStemmer()
+        tokenized = [stemmer.stem(token) for token in tokenized]
 
     return tokenized

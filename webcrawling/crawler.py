@@ -2,14 +2,12 @@ import functools
 import random
 import threading
 import time
-from logging import getLogger
 from queue import Queue, Empty
 from urllib.parse import urlparse, urljoin, unquote, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
-from tld import get_tld
 
 from webcrawling.back_heap import BackHeap
 from webcrawling.parser.robots_parser import RobotsParser
@@ -21,13 +19,13 @@ def log_on_failure(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            getLogger().error(f'Terminating worker exception: {e}')
+            logger.error(f'Terminating worker exception: {e}')
 
     return wrapper
 
 
 class Crawler:
-    UserAgent = 'Wibot'
+    UserAgent = 'Friendly Crawler'
     BaseHeaders = {'User-Agent': UserAgent}
 
     def normalize_url(self, url, referer=None):
@@ -132,7 +130,7 @@ class Crawler:
         self.seen_urls.add(response.url)
 
         if response.status_code != 200:
-            # getLogger().error(f'{url} returned {response.status_code}')
+            # logger.error(f'{url} returned {response.status_code}')
 
             return None, response.url
         else:
@@ -158,14 +156,14 @@ class Crawler:
             # Get contents of extracted URL
             text, url = self.request_url(url)
             if not text or not url:
-                getLogger().error(f'Failed to get {url}')
+                logger.error(f'Failed to get {url}')
 
                 return False
 
             # Parse with BS4
             soup = BeautifulSoup(text, 'lxml')
             if not soup:
-                getLogger().error(f'Could not parse {url}')
+                logger.error(f'Could not parse {url}')
 
                 return False
 
@@ -196,7 +194,7 @@ class Crawler:
             # Add to dictionary of URL contents
             self.add_contents(url, soup.text)
         except Exception as e:
-            getLogger().error(f'Worker exception: {e}')
+            logger.error(f'Worker exception: {e}')
             return False
 
         return True

@@ -1,4 +1,5 @@
 import time
+from _thread import interrupt_main
 from pickle import dump
 from threading import Thread
 
@@ -8,13 +9,8 @@ from webcrawling.crawler import Crawler
 
 if __name__ == "__main__":
     crawler = Crawler()
+    crawler.queue_raw_url('https://twitter.com/search?q=%23dkpol')
 
-    # Add seed URLs
-    crawler.queue_raw_url('https://www.cs.aau.dk/')
-    crawler.queue_raw_url('http://anderslangballe.dk')
-    crawler.queue_raw_url('https://www.tv2.dk')
-
-    # Start logger thread
     def log():
         while True:
             logger.info(
@@ -24,14 +20,13 @@ if __name__ == "__main__":
             time.sleep(5)
 
             # If a certain content length has been reached, terminate
-            if len(crawler.url_contents) > 1000:
+            if len(crawler.url_contents) > 3000:
                 logger.info('Dumping contents and references...')
-                dump(crawler.url_contents, open('contents.p', 'wb'))
-                dump(crawler.url_references, open('references.p', 'wb'))
+                dump(crawler.url_contents, open('contents.pkl', 'wb'))
+                dump(crawler.url_references, open('references.pkl', 'wb'))
                 logger.info('Dump complete')
 
-                return
-
+                interrupt_main()
 
     thread = Thread(target=log)
     thread.start()

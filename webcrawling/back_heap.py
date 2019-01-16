@@ -1,7 +1,8 @@
 import heapq
 import threading
 import time
-from logging import getLogger
+
+from loguru import logger
 
 
 def _current_time_millis():
@@ -42,7 +43,7 @@ class BackHeap:
         with self.lock:
             # If host is already in heap, do not push it
             if new_host in self.get_hosts():
-                getLogger().error(f'Attempted to push host {new_host} when already in heap')
+                logger.error(f'Attempted to push host {new_host} when already in heap')
 
                 return False
 

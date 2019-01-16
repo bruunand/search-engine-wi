@@ -16,7 +16,3 @@ def get_supershingles(sketch, hashing_function=hash, k=6):
         raise RuntimeError('Sketch size should be divisible by k')
 
     return [hashing_function(tuple(sketch[i:i+k])) for i in range(0, len(sketch), k)]
-
-
-if __name__ == "__main__":
-    print(get_shingles('This is a test of how shingles work'.split(), 4))
