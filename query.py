@@ -37,8 +37,8 @@ if __name__ == "__main__":
     while True:
         query = FreeTextQuery(indexer, input('Enter query:'))
 
-        # Rank with cosine similarity + PageRank
-        content_ranker = ContentRanker(query, url_pagerank)
+        # Rank with cosine similarity
+        content_ranker = ContentRanker(query)
 
         # Print results
         for idx, document in enumerate(content_ranker.top(10)):

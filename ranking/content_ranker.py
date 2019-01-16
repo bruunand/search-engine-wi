@@ -3,9 +3,8 @@ def _sort_scores(document_scores):
 
 
 class ContentRanker:
-    def __init__(self, query, auxiliary_scores=None):
+    def __init__(self, query):
         self._query = query
-        self._auxiliary_scores = auxiliary_scores
         self._rank_list = self._rank_cosine_score()
 
     def _rank_simple(self):
@@ -53,15 +52,6 @@ class ContentRanker:
         # We are not normalizing wrt query lengths because it is a constant, i.e. would not change ordering
         url = indexer.url_vocabulary.get
         scores = [(url(doc), scores[doc] / indexer.term_dict.get_document_length(doc)) for doc in relevant]
-
-        # If we have auxiliary scores, add these
-        if self._auxiliary_scores:
-            new_scores = []
-
-            for url, score in scores:
-                new_scores.append((url, self._auxiliary_scores.get(url, 0)))
-
-            scores = new_scores
 
         return _sort_scores(scores)
 
