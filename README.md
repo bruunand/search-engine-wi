@@ -1,5 +1,5 @@
 # WISearchEngine
-Simple search engine made as a part of the web intelligence (Software, MSc.) course at AAU.
+Simple Python search engine made as a part of the web intelligence (Software, MSc.) course at AAU.
 
 Features:
 - Content ranking with cosine similarity
